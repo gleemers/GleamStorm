@@ -1,4 +1,4 @@
-# GleamStorm
+![Logo](brand/gleamstorm_logo_text.png)
 
 A JetBrains-inspired IDE for the Gleam language.
 
