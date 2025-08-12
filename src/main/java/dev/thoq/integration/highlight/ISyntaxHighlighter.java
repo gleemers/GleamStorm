@@ -15,9 +15,11 @@
  * you may obtain one here:
  * MIT License: https://opensource.org/license/mit
  */
+package dev.thoq.integration.highlight;
 
-package dev.thoq.integration.lsp;
+import javax.swing.*;
 
-public interface IDiagnosticsListener {
-    void onDiagnostics(String uri, java.util.List<RDiagnostic> diagnostics);
+public interface ISyntaxHighlighter {
+    void setTheme(boolean isDarkTheme);
+    void highlight(JTextPane textPane);
 }

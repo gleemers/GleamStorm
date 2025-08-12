@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @SuppressWarnings("SameParameterValue")
-public class GleamLSPClient {
+public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
     private final java.util.concurrent.ConcurrentHashMap<Integer, java.util.function.Consumer<String>> hoverCallbacks = new java.util.concurrent.ConcurrentHashMap<>();
 
     private Process lspProcess;
@@ -650,5 +650,10 @@ public class GleamLSPClient {
 
     public void setWorkspaceRoot(String path) {
         this.workspaceRoot = path;
+    }
+
+    @Override
+    public String displayName() {
+        return "Gleam LSP";
     }
 }

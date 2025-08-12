@@ -1,1 +1,3 @@
-# TODO: Add Erlang support
+# TODO: Add Erlang lsp
+
+- Finished: Syntax Highlighting

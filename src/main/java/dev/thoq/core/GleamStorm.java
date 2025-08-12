@@ -20,6 +20,8 @@ package dev.thoq.core;
 
 import dev.thoq.integration.gleam.GleamLSPClient;
 import dev.thoq.integration.gleam.GleamSyntaxHighlighter;
+import dev.thoq.integration.erlang.ErlangSyntaxHighlighter;
+import dev.thoq.integration.highlight.ISyntaxHighlighter;
 import dev.thoq.integration.lsp.RDiagnostic;
 import dev.thoq.ui.CustomScrollBarUI;
 import dev.thoq.ui.CustomTitleBar;
@@ -58,7 +60,7 @@ public class GleamStorm extends JFrame {
     private File currentFile;
     private File currentFolder;
     private boolean isDarkTheme = true;
-    private GleamSyntaxHighlighter syntaxHighlighter;
+    private ISyntaxHighlighter syntaxHighlighter;
     private GleamLSPClient lspClient;
     private JScrollPane scrollPane;
     private JPanel mainPanel;
@@ -180,7 +182,7 @@ public class GleamStorm extends JFrame {
 
         highlightTimer = new Timer(300, _ -> {
             syntaxHighlighter.highlight(textPane);
-            if(lspClient != null && lspClient.isConnected() && currentFile != null) {
+            if(lspClient != null && lspClient.isConnected() && isGleamFile(currentFile)) {
                 lspClient.checkSyntax(currentFile.getAbsolutePath(), textPane.getText());
             }
         });
@@ -281,6 +283,30 @@ public class GleamStorm extends JFrame {
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
 
         lspClient = new GleamLSPClient();
+    }
+
+    private boolean isGleamFile(File f) {
+        if(f == null) return false;
+        String name = f.getName().toLowerCase();
+        return name.endsWith(".gleam");
+    }
+
+    private boolean isErlangFile(File f) {
+        if(f == null) return false;
+        String n = f.getName().toLowerCase();
+        return n.endsWith(".erl") || n.endsWith(".hrl") || n.endsWith(".xrl") || n.endsWith(".yrl");
+    }
+
+    private void setHighlighterForFile(File f) {
+        if(isErlangFile(f)) {
+            if(!(syntaxHighlighter instanceof ErlangSyntaxHighlighter)) {
+                syntaxHighlighter = new ErlangSyntaxHighlighter();
+            }
+        } else {
+            if(!(syntaxHighlighter instanceof GleamSyntaxHighlighter)) {
+                syntaxHighlighter = new GleamSyntaxHighlighter();
+            }
+        }
     }
 
     private void initializeSuggestions() {
@@ -955,7 +981,7 @@ public class GleamStorm extends JFrame {
     }
 
     private void openFile() {
-        dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.OPEN_FILE, new String[]{"gleam"});
+        dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.OPEN_FILE, new String[]{"gleam", "erl", "hrl", "xrl", "yrl"});
         java.io.File sel = picker.pick();
         if(sel != null) {
             currentFile = sel;
@@ -966,6 +992,11 @@ public class GleamStorm extends JFrame {
                 setTitle("GleamStorm - " + currentFile.getName());
                 statusLabel.setText(" Opened: " + currentFile.getName());
                 textPane.requestFocus();
+
+                // Switch syntax highlighter based on file type
+                setHighlighterForFile(currentFile);
+                syntaxHighlighter.setTheme(isDarkTheme);
+                syntaxHighlighter.highlight(textPane);
 
                 if(currentFolder == null && lspClient != null) {
                     File parent = currentFile.getParentFile();
@@ -980,7 +1011,7 @@ public class GleamStorm extends JFrame {
                 }
 
                 assert lspClient != null;
-                if(lspClient.isConnected()) {
+                if(isGleamFile(currentFile) && lspClient.isConnected()) {
                     lspClient.openDocument(currentFile.getAbsolutePath(), content);
                 }
             } catch(IOException e) {
@@ -1000,7 +1031,7 @@ public class GleamStorm extends JFrame {
             Files.write(currentFile.toPath(), textPane.getText().getBytes());
             statusLabel.setText(" Saved: " + currentFile.getName());
 
-            if(lspClient.isConnected()) {
+            if(isGleamFile(currentFile) && lspClient.isConnected()) {
                 lspClient.saveDocument(currentFile.getAbsolutePath(), textPane.getText());
             }
         } catch(IOException e) {
@@ -1020,12 +1051,14 @@ public class GleamStorm extends JFrame {
     }
 
     private void formatDocument() {
-        if(lspClient.isConnected() && currentFile != null) {
+        if(isGleamFile(currentFile) && lspClient.isConnected()) {
             String formatted = lspClient.formatDocument(currentFile.getAbsolutePath());
             if(formatted != null) {
                 textPane.setText(formatted);
                 statusLabel.setText(" Document formatted");
             }
+        } else if(isErlangFile(currentFile)) {
+            statusLabel.setText(" Formatting not available for Erlang in this editor");
         } else {
             statusLabel.setText(" LSP not connected - cannot format");
         }
@@ -1082,7 +1115,12 @@ public class GleamStorm extends JFrame {
             setTitle("GleamStorm - " + currentFile.getName());
             statusLabel.setText(" Opened: " + currentFile.getName());
             textPane.requestFocus();
-            if(lspClient.isConnected()) {
+
+            setHighlighterForFile(currentFile);
+            syntaxHighlighter.setTheme(isDarkTheme);
+            syntaxHighlighter.highlight(textPane);
+
+            if(isGleamFile(currentFile) && lspClient.isConnected()) {
                 lspClient.openDocument(currentFile.getAbsolutePath(), content);
             }
         } catch(IOException e) {
@@ -1252,7 +1290,7 @@ public class GleamStorm extends JFrame {
     }
 
     private void triggerHoverLookup() {
-        if(lspClient == null || !lspClient.isConnected() || currentFile == null || lastMousePoint == null) return;
+        if(lspClient == null || !lspClient.isConnected() || lastMousePoint == null || !isGleamFile(currentFile)) return;
         int offset = textPane.viewToModel(lastMousePoint);
         if(offset < 0) return;
         if(offset == lastHoverOffset) return;

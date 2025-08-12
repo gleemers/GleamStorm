@@ -1,0 +1,14 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "textDocument/formatting",
+  "params": {
+    "textDocument": {
+      "uri": null
+    },
+    "options": {
+      "tabSize": 2,
+      "insertSpaces": true
+    }
+  }
+}

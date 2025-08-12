@@ -24,7 +24,7 @@ import java.awt.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class GleamSyntaxHighlighter {
+public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.ISyntaxHighlighter {
     private boolean isDarkTheme = true;
 
     private static final String[] KEYWORDS = {
@@ -134,7 +134,7 @@ public class GleamSyntaxHighlighter {
 
         doc.setCharacterAttributes(0, text.length(), defaultStyle, true);
 
-        highlightPattern(doc, text, commentPattern, commentStyle);
+        // Apply non-comment highlights first
         highlightPattern(doc, text, stringPattern, stringStyle);
         highlightPattern(doc, text, keywordPattern, keywordStyle);
         highlightPattern(doc, text, typePattern, typeStyle);
@@ -142,6 +142,8 @@ public class GleamSyntaxHighlighter {
         highlightPattern(doc, text, numberPattern, numberStyle);
         highlightPattern(doc, text, operatorPattern, operatorStyle);
         highlightFunctionCalls(doc, text);
+        // Comments last so they override any prior styling
+        highlightPattern(doc, text, commentPattern, commentStyle);
     }
 
     private void highlightPattern(StyledDocument doc, String text, Pattern pattern, Style style) {
