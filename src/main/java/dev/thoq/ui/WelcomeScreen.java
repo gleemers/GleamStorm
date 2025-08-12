@@ -36,21 +36,10 @@ import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("SameParameterValue")
 public class WelcomeScreen extends JFrame {
-    private boolean isDarkTheme = true;
     private final JPanel mainPanel = new JPanel(new BorderLayout());
     private final CustomTitleBar titleBar = new CustomTitleBar(this, "GleamStorm");
     private final CardLayout centerLayout = new CardLayout();
     private final JPanel centerPanel = new JPanel(centerLayout);
-    private static final Color DARK_BG = new Color(18, 18, 18);
-    private static final Color DARK_FG = new Color(230, 230, 230);
-    private static final Color DARK_MENU_BG = new Color(24, 24, 24);
-    private static final Color DARK_BORDER = new Color(30, 30, 30);
-    private static final Color DARK_ACCENT = new Color(160, 160, 160);
-    private static final Color LIGHT_BG = new Color(250, 250, 250);
-    private static final Color LIGHT_FG = new Color(32, 32, 32);
-    private static final Color LIGHT_MENU_BG = new Color(242, 242, 242);
-    private static final Color LIGHT_BORDER = new Color(235, 235, 235);
-    private static final Color LIGHT_ACCENT = new Color(128, 128, 128);
 
     public WelcomeScreen() {
         setUndecorated(true);
@@ -190,7 +179,7 @@ public class WelcomeScreen extends JFrame {
         openBtn.addActionListener(_ -> onOpenProject());
         cloneBtn.addActionListener(_ -> centerLayout.show(centerPanel, "clone"));
         themeBtn.addActionListener(_ -> {
-            isDarkTheme = !isDarkTheme;
+            Theme.toggle();
             applyTheme();
         });
 
@@ -228,10 +217,10 @@ public class WelcomeScreen extends JFrame {
     }
 
     private void applyTheme() {
-        Color bg = isDarkTheme ? DARK_BG : LIGHT_BG;
-        Color fg = isDarkTheme ? DARK_FG : LIGHT_FG;
-        Color menu = isDarkTheme ? DARK_MENU_BG : LIGHT_MENU_BG;
-        Color accent = getAccentColor();
+        Color bg = Theme.bg();
+        Color fg = Theme.fg();
+        Color menu = Theme.menuBg();
+        Color accent = Theme.accent();
 
         mainPanel.setBackground(bg);
         titleBar.applyTheme(menu, fg, accent);
@@ -305,11 +294,11 @@ public class WelcomeScreen extends JFrame {
     }
 
     private Color getAccentColor() {
-        return isDarkTheme ? DARK_ACCENT : LIGHT_ACCENT;
+        return Theme.accent();
     }
 
     private Color getBorderColor() {
-        return isDarkTheme ? DARK_BORDER : LIGHT_BORDER;
+        return Theme.border();
     }
 
     private void showNewProjectUI() {
@@ -628,9 +617,9 @@ public class WelcomeScreen extends JFrame {
         d.setUndecorated(true);
         JPanel p = new JPanel(new BorderLayout());
         p.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(16, 20, 16, 20)));
-        p.setBackground(isDarkTheme ? DARK_MENU_BG : LIGHT_MENU_BG);
+        p.setBackground(Theme.menuBg());
         JLabel l = new JLabel(text);
-        l.setForeground(isDarkTheme ? DARK_FG : LIGHT_FG);
+        l.setForeground(Theme.fg());
         p.add(l, BorderLayout.CENTER);
         d.getContentPane().add(p);
         d.pack();

@@ -34,7 +34,7 @@ public class CustomTitleBar extends JPanel {
         super(new BorderLayout());
 
         setOpaque(true);
-        setBorder(new CompoundBorder(new LineBorder(new Color(160, 160, 160), 1, true), new EmptyBorder(6, 10, 6, 10)));
+        setBorder(new CompoundBorder(new LineBorder(Theme.accent(), 1, true), new EmptyBorder(6, 10, 6, 10)));
 
         titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
