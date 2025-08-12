@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) GleamStorm 2025.
+ *
+ *  This file is a part of the GleamStorm IDE, an IDE for
+ *  the Gleam programming language.
+ *
+ * GleamStorm GitHub: https://github.com/gleemers/gleamstorm.git
+ *
+ * GleamStorm does NOT come with a warranty.
+ *
+ * GleamStorm is licensed under the MIT license.
+ * Whilst contributing, modifying, or distributing, make sure
+ * you agree to the MIT license.
+ * If you did not receive a copy of the MIT license,
+ * you may obtain one here:
+ * MIT License: https://opensource.org/license/mit
+ */
+
 package dev.thoq.integration.gleam;
 
 import javax.swing.*;
@@ -15,23 +33,25 @@ public class GleamSyntaxHighlighter {
     };
 
     private static final String[] TYPES = {
-            "Int", "Float", "String", "Bool", "List", "Result", "Option",
-            "Nil", "True", "False"
+        "Int", "Float", "String", "Bool", "List", "Result", "Option",
+        "Nil", "True", "False"
     };
 
     private Pattern keywordPattern;
     private Pattern typePattern;
+    private Pattern capitalizedIdentPattern;
     private Pattern stringPattern;
     private Pattern commentPattern;
     private Pattern numberPattern;
     private Pattern operatorPattern;
-
+    private Pattern functionCallPattern;
     private Style keywordStyle;
     private Style typeStyle;
     private Style stringStyle;
     private Style commentStyle;
     private Style numberStyle;
     private Style operatorStyle;
+    private Style functionStyle;
     private Style defaultStyle;
 
     public GleamSyntaxHighlighter() {
@@ -45,21 +65,26 @@ public class GleamSyntaxHighlighter {
             keywordBuilder.append(KEYWORDS[i]);
             if (i < KEYWORDS.length - 1) keywordBuilder.append("|");
         }
+
         keywordBuilder.append(")\\b");
         keywordPattern = Pattern.compile(keywordBuilder.toString());
 
         StringBuilder typeBuilder = new StringBuilder("\\b(");
+
         for (int i = 0; i < TYPES.length; i++) {
             typeBuilder.append(TYPES[i]);
-            if (i < TYPES.length - 1) typeBuilder.append("|");
+            if (i < TYPES.length - 1)
+                typeBuilder.append("|");
         }
         typeBuilder.append(")\\b");
-        typePattern = Pattern.compile(typeBuilder.toString());
 
+        typePattern = Pattern.compile(typeBuilder.toString());
+        capitalizedIdentPattern = Pattern.compile("\\b[A-Z][A-Za-z0-9_]*\\b");
         stringPattern = Pattern.compile("\"([^\\\\\"]|\\\\.)*\"");
         commentPattern = Pattern.compile("//.*$", Pattern.MULTILINE);
         numberPattern = Pattern.compile("\\b\\d+(\\.\\d+)?\\b");
         operatorPattern = Pattern.compile("[+\\-*/<>=!&|]+");
+        functionCallPattern = Pattern.compile("\\b(?:[a-z][a-z0-9_]*\\.)*([a-z][a-z0-9_]*)\\s*\\(");
     }
 
     private void createStyles() {
@@ -72,6 +97,7 @@ public class GleamSyntaxHighlighter {
         commentStyle = context.addStyle("comment", null);
         numberStyle = context.addStyle("number", null);
         operatorStyle = context.addStyle("operator", null);
+        functionStyle = context.addStyle("function", null);
 
         updateStyleColors();
     }
@@ -84,6 +110,7 @@ public class GleamSyntaxHighlighter {
         StyleConstants.setForeground(commentStyle, getCommentColor());
         StyleConstants.setForeground(numberStyle, getNumberColor());
         StyleConstants.setForeground(operatorStyle, getOperatorColor());
+        StyleConstants.setForeground(functionStyle, getFunctionColor());
     }
 
     public void setTheme(boolean isDarkTheme) {
@@ -111,8 +138,10 @@ public class GleamSyntaxHighlighter {
         highlightPattern(doc, text, stringPattern, stringStyle);
         highlightPattern(doc, text, keywordPattern, keywordStyle);
         highlightPattern(doc, text, typePattern, typeStyle);
+        highlightPattern(doc, text, capitalizedIdentPattern, typeStyle);
         highlightPattern(doc, text, numberPattern, numberStyle);
         highlightPattern(doc, text, operatorPattern, operatorStyle);
+        highlightFunctionCalls(doc, text);
     }
 
     private void highlightPattern(StyledDocument doc, String text, Pattern pattern, Style style) {
@@ -120,6 +149,28 @@ public class GleamSyntaxHighlighter {
         while (matcher.find()) {
             doc.setCharacterAttributes(matcher.start(), matcher.end() - matcher.start(), style, false);
         }
+    }
+
+    private void highlightFunctionCalls(StyledDocument doc, String text) {
+        Matcher m = functionCallPattern.matcher(text);
+        while (m.find()) {
+            int start = m.start(1);
+            int end = m.end(1);
+            String name = text.substring(start, end);
+            int lookBack = Math.max(0, start - 5);
+            String prefix = text.substring(lookBack, start);
+            if (prefix.matches(".*\\bfn\\s+$") || isKeyword(name)) {
+                continue;
+            }
+            doc.setCharacterAttributes(start, end - start, functionStyle, false);
+        }
+    }
+
+    private boolean isKeyword(String s) {
+        for (String k : KEYWORDS) {
+            if (k.equals(s)) return true;
+        }
+        return false;
     }
 
     private Color getKeywordColor() {
@@ -144,5 +195,9 @@ public class GleamSyntaxHighlighter {
 
     private Color getOperatorColor() {
         return isDarkTheme ? new Color(204, 204, 204) : new Color(64, 64, 64);
+    }
+
+    private Color getFunctionColor() {
+        return isDarkTheme ? new Color(97, 175, 239) : new Color(0, 102, 204);
     }
 }

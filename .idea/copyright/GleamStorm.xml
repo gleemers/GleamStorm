@@ -1,0 +1,6 @@
+<component name="CopyrightManager">
+  <copyright>
+    <option name="notice" value="Copyright (c) GleamStorm &amp;#36;originalComment.match(&quot;Copyright \(c\) (\d+)&quot;, 1, &quot;-&quot;, &quot;&amp;#36;today.year&quot;)&amp;#36;today.year.&#10; &#10; This file is a part of the GleamStorm IDE, an IDE for&#10; the Gleam programming language.&#10; &#10;GleamStorm GitHub: https://github.com/gleemers/gleamstorm.git&#10; &#10;GleamStorm does NOT come with a warranty.&#10;&#10;GleamStorm is licensed under the MIT license.&#10;Whilst contributing, modifying, or distributing, make sure&#10;you agree to the MIT license.&#10;If you did not receive a copy of the MIT license,&#10;you may obtain one here:&#10;MIT License: https://opensource.org/license/mit" />
+    <option name="myName" value="GleamStorm" />
+  </copyright>
+</component>

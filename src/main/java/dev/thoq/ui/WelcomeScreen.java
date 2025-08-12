@@ -1,3 +1,21 @@
+/*
+ * Copyright (c) GleamStorm 2025.
+ *
+ *  This file is a part of the GleamStorm IDE, an IDE for
+ *  the Gleam programming language.
+ *
+ * GleamStorm GitHub: https://github.com/gleemers/gleamstorm.git
+ *
+ * GleamStorm does NOT come with a warranty.
+ *
+ * GleamStorm is licensed under the MIT license.
+ * Whilst contributing, modifying, or distributing, make sure
+ * you agree to the MIT license.
+ * If you did not receive a copy of the MIT license,
+ * you may obtain one here:
+ * MIT License: https://opensource.org/license/mit
+ */
+
 package dev.thoq.ui;
 
 import dev.thoq.core.GleamStorm;
@@ -14,8 +32,6 @@ import java.awt.event.ComponentEvent;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @SuppressWarnings("SameParameterValue")
@@ -74,9 +90,11 @@ public class WelcomeScreen extends JFrame {
         home.add(actions, BorderLayout.CENTER);
 
         JPanel newProject = buildNewProjectPanel();
+        JPanel clonePanel = buildClonePanel();
 
         centerPanel.add(home, "home");
         centerPanel.add(newProject, "new");
+        centerPanel.add(clonePanel, "clone");
         centerLayout.show(centerPanel, "home");
 
         JLabel footer = new JLabel("Welcome to GleamStorm", SwingConstants.LEFT);
@@ -161,7 +179,7 @@ public class WelcomeScreen extends JFrame {
 
         newBtn.addActionListener(_ -> showNewProjectUI());
         openBtn.addActionListener(_ -> onOpenProject());
-        cloneBtn.addActionListener(_ -> onCloneFromGit());
+        cloneBtn.addActionListener(_ -> centerLayout.show(centerPanel, "clone"));
         themeBtn.addActionListener(_ -> {
             isDarkTheme = !isDarkTheme;
             applyTheme();
@@ -315,10 +333,10 @@ public class WelcomeScreen extends JFrame {
         panel.add(dirField, gbc);
         JButton browse = new JButton("Browse...");
         browse.addActionListener(_ -> {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                dirField.setText(chooser.getSelectedFile().getAbsolutePath());
+            dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
+            java.io.File sel = picker.pick();
+            if(sel != null) {
+                dirField.setText(sel.getAbsolutePath());
             }
         });
         gbc.gridx = 2;
@@ -383,95 +401,116 @@ public class WelcomeScreen extends JFrame {
         });
 
         return panel;
-    }
-
-    private void onOpenProject() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            openInEditor(chooser.getSelectedFile());
         }
-    }
 
-    private void onCloneFromGit() {
+        private JPanel buildClonePanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(new EmptyBorder(24, 24, 24, 24));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(8, 8, 8, 8);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.weightx = 0;
+
+        JLabel title = new JLabel("Clone From Git");
+        title.setFont(new Font("SansSerif", Font.BOLD, 20));
+        gbc.gridwidth = 3;
+        panel.add(title, gbc);
+        gbc.gridwidth = 1;
+
+        gbc.gridy++;
+        panel.add(new JLabel("Git URL:"), gbc);
         JTextField urlField = new JTextField();
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        panel.add(urlField, gbc);
+        gbc.gridx = 2;
+        gbc.weightx = 0;
+        panel.add(Box.createHorizontalStrut(1), gbc);
+
+        gbc.gridx = 0;
+        gbc.gridy++;
+        panel.add(new JLabel("Location (parent):"), gbc);
         JTextField parentField = new JTextField();
-        JTextField folderField = new JTextField();
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        panel.add(parentField, gbc);
         JButton browse = new JButton("Browse...");
         browse.addActionListener(_ -> {
-            JFileChooser chooser = new JFileChooser();
-            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-                parentField.setText(chooser.getSelectedFile().getAbsolutePath());
-            }
+            dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
+            java.io.File sel = picker.pick();
+            if(sel != null) parentField.setText(sel.getAbsolutePath());
         });
-        JPanel p = new JPanel(new GridBagLayout());
-        p.setOpaque(false);
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(6, 6, 6, 6);
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        p.add(new JLabel("Git URL:"), gbc);
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        p.add(urlField, gbc);
-        gbc.gridx = 0;
-        gbc.gridy = 1;
-        gbc.weightx = 0;
-        gbc.fill = GridBagConstraints.NONE;
-        p.add(new JLabel("Location (parent):"), gbc);
-        gbc.gridx = 1;
-        gbc.gridy = 1;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        p.add(parentField, gbc);
         gbc.gridx = 2;
-        gbc.gridy = 1;
-        p.add(browse, gbc);
-        gbc.gridx = 0;
-        gbc.gridy = 2;
-        p.add(new JLabel("Folder name (optional):"), gbc);
-        gbc.gridx = 1;
-        gbc.gridy = 2;
-        gbc.weightx = 1;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        p.add(folderField, gbc);
+        gbc.weightx = 0;
+        panel.add(browse, gbc);
 
-        int res = JOptionPane.showConfirmDialog(this, p, "Clone from Git", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE);
-        if(res != JOptionPane.OK_OPTION) return;
-        String url = urlField.getText().trim();
-        String parent = parentField.getText().trim();
-        String name = folderField.getText().trim();
-        if(url.isEmpty() || parent.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Please provide Git URL and parent folder.", "Missing info", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-        File parentDir = new File(parent);
-        if(!parentDir.isDirectory()) {
-            JOptionPane.showMessageDialog(this, "Invalid parent directory.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-        List<String> cmd = new ArrayList<>();
-        cmd.add("git");
-        cmd.add("clone");
-        cmd.add(url);
-        File clonedDir;
-        if(!name.isEmpty()) {
-            cmd.add(name);
-            clonedDir = new File(parentDir, name);
-        } else {
-            String guess = url.replaceAll("/+", "/");
-            int i = guess.lastIndexOf('/');
-            String tail = i >= 0 ? guess.substring(i + 1) : "repo";
-            if(tail.endsWith(".git")) tail = tail.substring(0, tail.length() - 4);
-            clonedDir = new File(parentDir, tail);
-        }
-        runCommandAsync(cmd.toArray(new String[0]), parentDir, "Cloning repository...", success -> {
-            if(success && clonedDir.isDirectory()) openInEditor(clonedDir);
-            else JOptionPane.showMessageDialog(this, errorMessageFor("git"), "Git Error", JOptionPane.ERROR_MESSAGE);
+        gbc.gridx = 0;
+        gbc.gridy++;
+        panel.add(new JLabel("Folder name (optional):"), gbc);
+        JTextField folderField = new JTextField();
+        gbc.gridx = 1;
+        gbc.weightx = 1;
+        panel.add(folderField, gbc);
+        gbc.gridx = 2;
+        gbc.weightx = 0;
+        panel.add(Box.createHorizontalStrut(1), gbc);
+
+        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        JButton back = new JButton("Back");
+        JButton clone = new JButton("Clone");
+        buttonRow.add(back);
+        buttonRow.add(clone);
+        gbc.gridx = 0;
+        gbc.gridy++;
+        gbc.gridwidth = 3;
+        panel.add(buttonRow, gbc);
+
+        back.addActionListener(_ -> centerLayout.show(centerPanel, "home"));
+        clone.addActionListener(_ -> {
+            String url = urlField.getText().trim();
+            String parent = parentField.getText().trim();
+            String name = folderField.getText().trim();
+            if(url.isEmpty() || parent.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please provide Git URL and parent folder.", "Missing info", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+            File parentDir = new File(parent);
+            if(!parentDir.isDirectory()) {
+                JOptionPane.showMessageDialog(this, "Invalid parent directory.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            java.util.List<String> cmd = new java.util.ArrayList<>();
+            cmd.add("git");
+            cmd.add("clone");
+            cmd.add(url);
+            File clonedDir;
+            if(!name.isEmpty()) {
+                cmd.add(name);
+                clonedDir = new File(parentDir, name);
+            } else {
+                String guess = url.replaceAll("/+", "/");
+                int i = guess.lastIndexOf('/');
+                String tail = i >= 0 ? guess.substring(i + 1) : "repo";
+                if(tail.endsWith(".git")) tail = tail.substring(0, tail.length() - 4);
+                clonedDir = new File(parentDir, tail);
+            }
+            runCommandAsync(cmd.toArray(new String[0]), parentDir, "Cloning repository...", success -> {
+                if(success && clonedDir.isDirectory()) openInEditor(clonedDir);
+                else JOptionPane.showMessageDialog(this, errorMessageFor("git"), "Git Error", JOptionPane.ERROR_MESSAGE);
+            });
         });
+
+        return panel;
+        }
+
+        private void onOpenProject() {
+        dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
+        java.io.File sel = picker.pick();
+        if(sel != null) {
+            openInEditor(sel);
+        }
     }
 
     private void runCommandAsync(String[] cmd, File workDir, String status, java.util.function.Consumer<Boolean> done) {

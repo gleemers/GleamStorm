@@ -16,4 +16,9 @@
  * MIT License: https://opensource.org/license/mit
  */
 
-rootProject.name = "GleamStorm"
+package dev.thoq.integration.lsp;
+
+public interface IDiagnosticsListener {
+    void onDiagnostics(String uri, java.util.List<RDiagnostic> diagnostics);
+}
+

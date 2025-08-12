@@ -16,4 +16,7 @@
  * MIT License: https://opensource.org/license/mit
  */
 
-rootProject.name = "GleamStorm"
+package dev.thoq.integration.lsp;
+
+public record RDiagnostic(int startLine, int startChar, int endLine, int endChar, String message, Integer severity) {
+}

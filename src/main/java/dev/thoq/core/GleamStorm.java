@@ -1,9 +1,29 @@
+/*
+ * Copyright (c) GleamStorm 2025.
+ *
+ *  This file is a part of the GleamStorm IDE, an IDE for
+ *  the Gleam programming language.
+ *
+ * GleamStorm GitHub: https://github.com/gleemers/gleamstorm.git
+ *
+ * GleamStorm does NOT come with a warranty.
+ *
+ * GleamStorm is licensed under the MIT license.
+ * Whilst contributing, modifying, or distributing, make sure
+ * you agree to the MIT license.
+ * If you did not receive a copy of the MIT license,
+ * you may obtain one here:
+ * MIT License: https://opensource.org/license/mit
+ */
+
 package dev.thoq.core;
 
 import dev.thoq.integration.gleam.GleamLSPClient;
 import dev.thoq.integration.gleam.GleamSyntaxHighlighter;
+import dev.thoq.integration.lsp.RDiagnostic;
 import dev.thoq.ui.CustomScrollBarUI;
 import dev.thoq.ui.CustomTitleBar;
+import dev.thoq.ui.SquigglePainter;
 import dev.thoq.ui.ThemedTreeCellRenderer;
 
 import javax.imageio.ImageIO;
@@ -14,8 +34,7 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.text.BadLocationException;
+import javax.swing.text.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
@@ -32,7 +51,7 @@ import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-@SuppressWarnings({"CallToPrintStackTrace", "deprecation"})
+@SuppressWarnings({"CallToPrintStackTrace", "deprecation", "MagicConstant"})
 public class GleamStorm extends JFrame {
     private JTextPane textPane;
     private JLabel statusLabel;
@@ -52,25 +71,27 @@ public class GleamStorm extends JFrame {
     private JPopupMenu suggestionPopup;
     private JList<String> suggestionList;
     private DefaultListModel<String> suggestionModel;
-
+    private final java.util.List<Object> diagnosticHighlights = new ArrayList<>();
+    private final Highlighter.HighlightPainter errorPainter = new SquigglePainter(new Color(255, 64, 64), 2, 4);
+    private final Highlighter.HighlightPainter warningPainter = new SquigglePainter(new Color(255, 165, 0), 2, 4);
+    private Timer hoverTimer;
+    private Point lastMousePoint;
+    private int lastHoverOffset = -1;
+    private String hoverText = null;
     private static final Color DARK_BG = new Color(18, 18, 18);
     private static final Color DARK_FG = new Color(230, 230, 230);
     private static final Color DARK_MENU_BG = new Color(24, 24, 24);
-
     private static final Color DARK_BORDER = new Color(30, 30, 30);
     private static final Color DARK_SELECTION = new Color(64, 64, 64);
     private static final Color DARK_SCROLL = new Color(72, 72, 72);
     private static final Color DARK_ACCENT = new Color(160, 160, 160);
-
     private static final Color LIGHT_BG = new Color(250, 250, 250);
     private static final Color LIGHT_FG = new Color(32, 32, 32);
     private static final Color LIGHT_MENU_BG = new Color(242, 242, 242);
-
     private static final Color LIGHT_BORDER = new Color(235, 235, 235);
     private static final Color LIGHT_SELECTION = new Color(220, 220, 220);
     private static final Color LIGHT_SCROLL = new Color(200, 200, 200);
     private static final Color LIGHT_ACCENT = new Color(128, 128, 128);
-
     private static final String[] GLEAM_KEYWORDS = {
             "as", "assert", "case", "const", "external", "fn", "if", "import",
             "let", "opaque", "pub", "todo", "try", "type", "use"
@@ -82,7 +103,6 @@ public class GleamStorm extends JFrame {
     };
 
     public GleamStorm() {
-
         setUndecorated(true);
         setBackground(new Color(0, 0, 0, 0));
         addComponentListener(new ComponentAdapter() {
@@ -142,7 +162,12 @@ public class GleamStorm extends JFrame {
         setSize(1200, 800);
         setLocationRelativeTo(null);
 
-        textPane = new JTextPane();
+        textPane = new JTextPane() {
+            @Override
+            public String getToolTipText(MouseEvent e) {
+                return (hoverText != null && !hoverText.isEmpty()) ? hoverText : null;
+            }
+        };
         textPane.setFont(new Font("JetBrains Mono", Font.PLAIN, 14));
         textPane.setEditable(true);
         textPane.setMargin(new Insets(15, 15, 15, 15));
@@ -153,11 +178,27 @@ public class GleamStorm extends JFrame {
 
         syntaxHighlighter = new GleamSyntaxHighlighter();
 
-        highlightTimer = new Timer(300, _ -> syntaxHighlighter.highlight(textPane));
+        highlightTimer = new Timer(300, _ -> {
+            syntaxHighlighter.highlight(textPane);
+            if(lspClient != null && lspClient.isConnected() && currentFile != null) {
+                lspClient.checkSyntax(currentFile.getAbsolutePath(), textPane.getText());
+            }
+        });
         highlightTimer.setRepeats(false);
 
         suggestionTimer = new Timer(200, _ -> performSuggestionCheck());
         suggestionTimer.setRepeats(false);
+
+        ToolTipManager.sharedInstance().registerComponent(textPane);
+        hoverTimer = new Timer(350, _ -> triggerHoverLookup());
+        hoverTimer.setRepeats(false);
+        textPane.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseMoved(MouseEvent e) {
+                lastMousePoint = e.getPoint();
+                hoverTimer.restart();
+            }
+        });
 
         textPane.getDocument().addDocumentListener(new DocumentListener() {
             @Override
@@ -197,6 +238,44 @@ public class GleamStorm extends JFrame {
             }
         });
 
+        int menuMask;
+        try {
+            menuMask = (Integer) Toolkit.class.getMethod("getMenuShortcutKeyMaskEx").invoke(Toolkit.getDefaultToolkit());
+        } catch(Exception ex) {
+            try {
+                menuMask = (int) Toolkit.class.getMethod("getMenuShortcutKeyMask").invoke(Toolkit.getDefaultToolkit());
+            } catch(Exception ex2) {
+                menuMask = InputEvent.CTRL_DOWN_MASK;
+            }
+        }
+
+        InputMap im = textPane.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW);
+        ActionMap am = textPane.getActionMap();
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_S, menuMask), "gs-save");
+        am.put("gs-save", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                saveFile();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_F, menuMask | KeyEvent.SHIFT_DOWN_MASK), "gs-format");
+        am.put("gs-format", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                formatDocument();
+            }
+        });
+
+        im.put(KeyStroke.getKeyStroke(KeyEvent.VK_O, menuMask), "gs-open");
+        am.put("gs-open", new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                openFile();
+            }
+        });
+
         statusLabel = new JLabel(" Ready");
         statusLabel.setBorder(new EmptyBorder(8, 15, 8, 15));
         statusLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
@@ -210,6 +289,16 @@ public class GleamStorm extends JFrame {
         suggestionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         suggestionList.setVisibleRowCount(8);
         suggestionList.setFocusable(false);
+        suggestionList.setFixedCellHeight(22);
+        suggestionList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel lbl = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                lbl.setBorder(new EmptyBorder(4, 10, 4, 10));
+                lbl.setOpaque(true);
+                return lbl;
+            }
+        });
 
         suggestionList.addMouseListener(new MouseAdapter() {
             @Override
@@ -222,9 +311,11 @@ public class GleamStorm extends JFrame {
 
         suggestionPopup = new JPopupMenu();
         suggestionPopup.setFocusable(false);
+        suggestionPopup.setOpaque(true);
         JScrollPane suggestionScroll = new JScrollPane(suggestionList);
-        suggestionScroll.setPreferredSize(new Dimension(200, 150));
+        suggestionScroll.setPreferredSize(new Dimension(240, 160));
         suggestionScroll.setFocusable(false);
+        suggestionScroll.setBorder(new EmptyBorder(0, 0, 0, 0));
         suggestionPopup.add(suggestionScroll);
     }
 
@@ -258,7 +349,7 @@ public class GleamStorm extends JFrame {
             int start = caretPos;
             while(start > 0) {
                 char c = text.charAt(start - 1);
-                if(Character.isLetterOrDigit(c) || c == '_' ) {
+                if(Character.isLetterOrDigit(c) || c == '_') {
                     start--;
                 } else {
                     break;
@@ -706,6 +797,10 @@ public class GleamStorm extends JFrame {
             UIManager.put("Menu.foreground", fgColor);
             UIManager.put("PopupMenu.foreground", fgColor);
 
+            UIManager.put("ToolTip.background", menuBgColor);
+            UIManager.put("ToolTip.foreground", fgColor);
+            UIManager.put("ToolTip.border", new LineBorder(borderColor, 1, true));
+
             UIManager.put("TextField.background", menuBgColor);
             UIManager.put("TextField.foreground", fgColor);
             UIManager.put("TextField.caretForeground", fgColor);
@@ -822,11 +917,10 @@ public class GleamStorm extends JFrame {
     }
 
     private void openFolder() {
-        JFileChooser chooser = new JFileChooser();
-        chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        chooser.setAcceptAllFileFilterUsed(false);
-        if(chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            openProject(chooser.getSelectedFile());
+        dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
+        java.io.File sel = picker.pick();
+        if(sel != null) {
+            openProject(sel);
         }
     }
 
@@ -861,14 +955,14 @@ public class GleamStorm extends JFrame {
     }
 
     private void openFile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Gleam Files (*.gleam)", "gleam"));
-
-        if(fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            currentFile = fileChooser.getSelectedFile();
+        dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.OPEN_FILE, new String[]{"gleam"});
+        java.io.File sel = picker.pick();
+        if(sel != null) {
+            currentFile = sel;
             try {
                 String content = new String(Files.readAllBytes(currentFile.toPath()));
                 textPane.setText(content);
+                clearDiagnosticHighlights();
                 setTitle("GleamStorm - " + currentFile.getName());
                 statusLabel.setText(" Opened: " + currentFile.getName());
                 textPane.requestFocus();
@@ -916,14 +1010,10 @@ public class GleamStorm extends JFrame {
     }
 
     private void saveAsFile() {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setFileFilter(new FileNameExtensionFilter("Gleam Files (*.gleam)", "gleam"));
-
-        if(fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            currentFile = fileChooser.getSelectedFile();
-            if(!currentFile.getName().endsWith(".gleam")) {
-                currentFile = new File(currentFile.getAbsolutePath() + ".gleam");
-            }
+        dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.SAVE_FILE, new String[]{"gleam"});
+        java.io.File sel = picker.pick();
+        if(sel != null) {
+            currentFile = sel.getName().endsWith(".gleam") ? sel : new File(sel.getAbsolutePath() + ".gleam");
             saveFile();
             setTitle("GleamStorm - " + currentFile.getName());
         }
@@ -988,6 +1078,7 @@ public class GleamStorm extends JFrame {
             currentFile = file;
             String content = new String(Files.readAllBytes(file.toPath()));
             textPane.setText(content);
+            clearDiagnosticHighlights();
             setTitle("GleamStorm - " + currentFile.getName());
             statusLabel.setText(" Opened: " + currentFile.getName());
             textPane.requestFocus();
@@ -1031,6 +1122,12 @@ public class GleamStorm extends JFrame {
                 Thread.sleep(1000);
 
                 if(lspClient.connect()) {
+                    lspClient.setDiagnosticsListener((uri, diagnostics) -> {
+                        if(currentFile == null) return;
+                        String fileUri = "file://" + currentFile.getAbsolutePath().replace("\\", "/");
+                        if(!fileUri.equals(uri)) return;
+                        SwingUtilities.invokeLater(() -> applyDiagnostics(diagnostics));
+                    });
 
                     Thread.sleep(2000);
 
@@ -1050,5 +1147,222 @@ public class GleamStorm extends JFrame {
                         statusLabel.setText(" LSP connection error: " + e.getMessage()));
             }
         }).start();
+    }
+
+    private void applyDiagnostics(java.util.List<RDiagnostic> diagnostics) {
+        Highlighter hl = textPane.getHighlighter();
+        for(Object tag : diagnosticHighlights) {
+            try {
+                hl.removeHighlight(tag);
+            } catch(Exception ignored) {
+            }
+        }
+        diagnosticHighlights.clear();
+
+        if(diagnostics == null || diagnostics.isEmpty()) {
+            statusLabel.setText(" No diagnostics");
+            return;
+        }
+
+        String text;
+        try {
+            text = textPane.getDocument().getText(0, textPane.getDocument().getLength());
+        } catch(BadLocationException e) {
+            return;
+        }
+
+        String firstMsg = null;
+        for(RDiagnostic d : diagnostics) {
+            int start = offsetFromLineChar(text, d.startLine(), d.startChar());
+            int end = offsetFromLineChar(text, d.endLine(), d.endChar());
+            if(end < start) {
+                int tmp = start;
+                start = end;
+                end = tmp;
+            }
+            try {
+                Highlighter.HighlightPainter painter = (d.severity() != null && d.severity() == 1) ? errorPainter : warningPainter;
+                Object tag = hl.addHighlight(Math.max(0, start), Math.min(end, text.length()), painter);
+                diagnosticHighlights.add(tag);
+                if(firstMsg == null && d.message() != null && !d.message().isEmpty()) {
+                    firstMsg = d.message();
+                }
+            } catch(BadLocationException ignored) {
+            }
+        }
+
+        if(firstMsg != null) {
+            statusLabel.setText(" " + firstMsg);
+        } else {
+            statusLabel.setText(" Diagnostics: " + diagnostics.size());
+        }
+    }
+
+    private int offsetFromLineChar(String text, int line, int ch) {
+        if(text == null) return 0;
+        if(line < 0) line = 0;
+        if(ch < 0) ch = 0;
+        int idx = 0;
+        int currentLine = 0;
+        int len = text.length();
+        while(currentLine < line && idx < len) {
+            int nl = text.indexOf('\n', idx);
+            if(nl == -1) {
+                idx = len;
+                break;
+            }
+            idx = nl + 1;
+            currentLine++;
+        }
+        int lineEnd = text.indexOf('\n', idx);
+        if(lineEnd == -1) lineEnd = len;
+        int offset = idx + ch;
+        if(offset > lineEnd) offset = lineEnd;
+        if(offset < 0) offset = 0;
+        return offset;
+    }
+
+    private void clearDiagnosticHighlights() {
+        Highlighter hl = textPane.getHighlighter();
+        for(Object tag : diagnosticHighlights) {
+            try {
+                hl.removeHighlight(tag);
+            } catch(Exception ignored) {
+            }
+        }
+        diagnosticHighlights.clear();
+    }
+
+    private int[] lineCharFromOffset(String text, int offset) {
+        if(text == null) return new int[]{0, 0};
+        int len = text.length();
+        if(offset < 0) offset = 0;
+        if(offset > len) offset = len;
+        int line = 0;
+        int lastNl = -1;
+        for(int i = 0; i < offset; i++) {
+            if(text.charAt(i) == '\n') {
+                line++;
+                lastNl = i;
+            }
+        }
+        int ch = offset - (lastNl + 1);
+        if(lastNl == -1) ch = offset;
+        return new int[]{line, ch};
+    }
+
+    private void triggerHoverLookup() {
+        if(lspClient == null || !lspClient.isConnected() || currentFile == null || lastMousePoint == null) return;
+        int offset = textPane.viewToModel(lastMousePoint);
+        if(offset < 0) return;
+        if(offset == lastHoverOffset) return;
+        lastHoverOffset = offset;
+        String text;
+        try {
+            text = textPane.getDocument().getText(0, textPane.getDocument().getLength());
+        } catch(BadLocationException e) {
+            return;
+        }
+        int[] lc = lineCharFromOffset(text, offset);
+        lspClient.requestHover(currentFile.getAbsolutePath(), lc[0], lc[1], result -> SwingUtilities.invokeLater(() -> {
+            hoverText = (result != null && !result.trim().isEmpty()) ? formatHoverHtml(result) : null;
+            textPane.setToolTipText(hoverText);
+        }));
+    }
+
+    private String formatHoverHtml(String md) {
+        if(md == null || md.isEmpty()) return null;
+        String text = md.replace("\r\n", "\n");
+
+        String fg = isDarkTheme ? "#e6e6e6" : "#202020";
+        String codeBg = isDarkTheme ? "#2b2b2b" : "#f0f0f0";
+        String containerStyle = "font-family:'Inter','Segoe UI',Arial,sans-serif; font-size: 15px; line-height:1.35; color:" + fg + "; max-width: 560px; white-space: normal; word-wrap: break-word;";
+        String codeInlineStyle = "font-family:'JetBrains Mono','Menlo','Consolas',monospace; font-size: 14px; background-color:" + codeBg + "; padding:2px 4px; border-radius:4px;";
+        String codeBlockStyle = "font-family:'JetBrains Mono','Menlo','Consolas',monospace; font-size: 13px; background-color:" + codeBg + "; padding:8px; border-radius:6px; margin:6px 0; white-space: pre-wrap; overflow-wrap: anywhere;";
+
+        java.util.regex.Pattern fence = java.util.regex.Pattern.compile("(?s)```[a-zA-Z0-9_+\\-]*\\n(.*?)\\n```\\s*");
+        java.util.regex.Matcher m = fence.matcher(text);
+        int last = 0;
+        StringBuilder html = new StringBuilder();
+        html.append("<html><div style=\"").append(containerStyle).append("\">");
+        while(m.find()) {
+            String before = text.substring(last, m.start());
+            if(!before.isEmpty()) html.append(formatInlineWithEscape(before, codeInlineStyle));
+            String code = m.group(1);
+            html.append("<pre style=\"").append(codeBlockStyle).append("\"><code>")
+                    .append(escapeHtml(code))
+                    .append("</code></pre>");
+            last = m.end();
+        }
+        String tail = text.substring(last);
+        if(!tail.isEmpty()) html.append(formatInlineWithEscape(tail, codeInlineStyle));
+        html.append("</div></html>");
+        return html.toString();
+    }
+
+    private String formatInlineWithEscape(String text, String codeInlineStyle) {
+        if(text == null || text.isEmpty()) return "";
+        StringBuilder out = new StringBuilder();
+        boolean inCode = false;
+        StringBuilder buf = new StringBuilder();
+        for(int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if(c == '`') {
+                if(inCode) {
+                    String code = buf.toString();
+                    out.append("<code style=\"").append(codeInlineStyle).append("\">")
+                            .append(escapeHtml(code).replace("\n", "<br/>"))
+                            .append("</code>");
+                    buf.setLength(0);
+                    inCode = false;
+                } else {
+                    if(!buf.isEmpty()) {
+                        out.append(escapeHtml(buf.toString()).replace("\n", "<br/>"));
+                        buf.setLength(0);
+                    }
+                    inCode = true;
+                }
+            } else {
+                buf.append(c);
+            }
+        }
+        if(!buf.isEmpty()) {
+            if(inCode) {
+                out.append("<code style=\"").append(codeInlineStyle).append("\">")
+                        .append(escapeHtml(buf.toString()).replace("\n", "<br/>"))
+                        .append("</code>");
+            } else {
+                out.append(escapeHtml(buf.toString()).replace("\n", "<br/>"));
+            }
+        }
+        return out.toString();
+    }
+
+    private static String escapeHtml(String s) {
+        if(s == null) return "";
+        StringBuilder sb = new StringBuilder(s.length());
+        for(int i = 0; i < s.length(); i++) {
+            char ch = s.charAt(i);
+            switch(ch) {
+                case '&':
+                    sb.append("&amp;");
+                    break;
+                case '<':
+                    sb.append("&lt;");
+                    break;
+                case '>':
+                    sb.append("&gt;");
+                    break;
+                case '"':
+                    sb.append("&quot;");
+                    break;
+                case '\'':
+                    sb.append("&#39;");
+                    break;
+                default:
+                    sb.append(ch);
+            }
+        }
+        return sb.toString();
     }
 }
