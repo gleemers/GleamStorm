@@ -1,0 +1,27 @@
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "initialize",
+  "params": {
+    "processId": null,
+    "rootUri": null,
+    "capabilities": {
+      "textDocument": {
+        "synchronization": {
+          "dynamicRegistration": true,
+          "willSave": true,
+          "didSave": true
+        },
+        "completion": {
+          "dynamicRegistration": true
+        },
+        "hover": {
+          "dynamicRegistration": true
+        },
+        "formatting": {
+          "dynamicRegistration": true
+        }
+      }
+    }
+  }
+}

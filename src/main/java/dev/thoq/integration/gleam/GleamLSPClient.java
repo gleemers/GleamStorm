@@ -230,43 +230,22 @@ public class GleamLSPClient {
         try {
             String root = (workspaceRoot != null && !workspaceRoot.isEmpty()) ? workspaceRoot : System.getProperty("user.dir");
             String rootUri = "file://" + root.replace("\\", "/");
-            String initRequest = "{\n" +
-                    "  \"jsonrpc\": \"2.0\",\n" +
-                    "  \"id\": " + (++requestId) + ",\n" +
-                    "  \"method\": \"initialize\",\n" +
-                    "  \"params\": {\n" +
-                    "    \"processId\": " + ProcessHandle.current().pid() + ",\n" +
-                    "    \"rootUri\": \"" + rootUri + "\",\n" +
-                    "    \"capabilities\": {\n" +
-                    "      \"textDocument\": {\n" +
-                    "        \"synchronization\": {\n" +
-                    "          \"dynamicRegistration\": true,\n" +
-                    "          \"willSave\": true,\n" +
-                    "          \"didSave\": true\n" +
-                    "        },\n" +
-                    "        \"completion\": {\n" +
-                    "          \"dynamicRegistration\": true\n" +
-                    "        },\n" +
-                    "        \"hover\": {\n" +
-                    "          \"dynamicRegistration\": true\n" +
-                    "        },\n" +
-                    "        \"formatting\": {\n" +
-                    "          \"dynamicRegistration\": true\n" +
-                    "        }\n" +
-                    "      }\n" +
-                    "    }\n" +
-                    "  }\n" +
-                    "}";
+
+            String initRequest = loadTemplate("init.json");
+            initRequest = initRequest
+                    .replace("\"id\": 1", "\"id\": " + (++requestId))
+                    .replace("\"processId\": null", "\"processId\": " + ProcessHandle.current().pid())
+                    .replace("\"rootUri\": null", "\"rootUri\": \"" + rootUri + "\"");
 
             if(debugMode) {
                 Logger.info("Initializing LSP with rootUri: " + rootUri);
             }
 
             sendRequestDirect(initRequest);
-
             Thread.sleep(500);
 
-            sendNotificationDirect("initialized", "{}");
+            String initializedRequest = loadTemplate("initialized.json");
+            sendNotificationDirect("initialized", initializedRequest);
 
             if(debugMode) {
                 Logger.info("Initialize request sent successfully");
@@ -278,6 +257,15 @@ public class GleamLSPClient {
                 System.err.println("Failed to send initialize request: " + e.getMessage());
             }
             return false;
+        }
+    }
+
+    private String loadTemplate(String filename) throws IOException {
+        try(InputStream is = getClass().getResourceAsStream("/lsp/gleam/" + filename)) {
+            if(is == null) {
+                throw new IOException("Template not found: " + filename);
+            }
+            return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         }
     }
 
@@ -306,15 +294,6 @@ public class GleamLSPClient {
         sendRequestDirect(notification);
     }
 
-    private void sendNotification(String method, String params) throws IOException {
-        String notification = "{\n" +
-                "  \"jsonrpc\": \"2.0\",\n" +
-                "  \"method\": \"" + method + "\",\n" +
-                "  \"params\": " + params + "\n" +
-                "}";
-        sendRequest(notification);
-    }
-
     public void openDocument(String filePath, String content) {
         if(!isConnected()) {
             if(debugMode) Logger.info("Cannot open document - LSP not connected");
@@ -325,14 +304,13 @@ public class GleamLSPClient {
             String uri = "file://" + filePath.replace("\\", "/");
             currentDocUri = uri;
             currentDocVersion = 1;
-            String params = "{\n" +
-                    "  \"textDocument\": {\n" +
-                    "    \"uri\": \"" + uri + "\",\n" +
-                    "    \"languageId\": \"gleam\",\n" +
-                    "    \"version\": " + currentDocVersion + ",\n" +
-                    "    \"text\": \"" + escapeJson(content) + "\"\n" +
-                    "  }\n" +
-                    "}";
+
+            String params = loadTemplate("didOpen.json");
+            params = params
+                    .replace("\"uri\": null", "\"uri\": \"" + uri + "\"")
+                    .replace("\"version\": 1", "\"version\": " + currentDocVersion)
+                    .replace("\"text\": null", "\"text\": \"" + escapeJson(content) + "\"");
+
             sendNotification("textDocument/didOpen", params);
         } catch(IOException e) {
             if(debugMode) {
@@ -349,11 +327,9 @@ public class GleamLSPClient {
         }
 
         try {
-            String params = "{\n" +
-                    "  \"textDocument\": {\n" +
-                    "    \"uri\": \"file://" + filePath.replace("\\", "/") + "\"\n" +
-                    "  }\n" +
-                    "}";
+            String params = loadTemplate("didSave.json");
+            params = params.replace("\"uri\": null", "\"uri\": \"file://" + filePath.replace("\\", "/") + "\"");
+
             sendNotification("textDocument/didSave", params);
         } catch(IOException e) {
             if(debugMode) {
@@ -370,20 +346,11 @@ public class GleamLSPClient {
         }
 
         try {
-            String formatRequest = "{\n" +
-                    "  \"jsonrpc\": \"2.0\",\n" +
-                    "  \"id\": " + (++requestId) + ",\n" +
-                    "  \"method\": \"textDocument/formatting\",\n" +
-                    "  \"params\": {\n" +
-                    "    \"textDocument\": {\n" +
-                    "      \"uri\": \"file://" + filePath.replace("\\", "/") + "\"\n" +
-                    "    },\n" +
-                    "    \"options\": {\n" +
-                    "      \"tabSize\": 2,\n" +
-                    "      \"insertSpaces\": true\n" +
-                    "    }\n" +
-                    "  }\n" +
-                    "}";
+            String formatRequest = loadTemplate("formatting.json");
+            formatRequest = formatRequest
+                    .replace("\"id\": 1", "\"id\": " + (++requestId))
+                    .replace("\"uri\": null", "\"uri\": \"file://" + filePath.replace("\\", "/") + "\"");
+
             sendRequest(formatRequest);
             return null;
         } catch(IOException e) {
@@ -412,17 +379,12 @@ public class GleamLSPClient {
                 }
             }
 
-            String params = "{\n" +
-                    "  \"textDocument\": {\n" +
-                    "    \"uri\": \"" + uri + "\",\n" +
-                    "    \"version\": " + currentDocVersion + "\n" +
-                    "  },\n" +
-                    "  \"contentChanges\": [\n" +
-                    "    {\n" +
-                    "      \"text\": \"" + escapeJson(content) + "\"\n" +
-                    "    }\n" +
-                    "  ]\n" +
-                    "}";
+            String params = loadTemplate("didChange.json");
+            params = params
+                    .replace("\"uri\": null", "\"uri\": \"" + uri + "\"")
+                    .replace("\"version\": 1", "\"version\": " + currentDocVersion)
+                    .replace("\"text\": null", "\"text\": \"" + escapeJson(content) + "\"");
+
             sendNotification("textDocument/didChange", params);
             return true;
         } catch(IOException e) {
@@ -432,6 +394,15 @@ public class GleamLSPClient {
             connected.set(false);
             return false;
         }
+    }
+
+    private void sendNotification(String method, String params) throws IOException {
+        String notification = "{\n" +
+                "  \"jsonrpc\": \"2.0\",\n" +
+                "  \"method\": \"" + method + "\",\n" +
+                "  \"params\": " + params + "\n" +
+                "}";
+        sendRequest(notification);
     }
 
     private String escapeJson(String text) {
