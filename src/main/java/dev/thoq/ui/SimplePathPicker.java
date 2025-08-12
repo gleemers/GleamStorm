@@ -43,8 +43,10 @@ public class SimplePathPicker extends JDialog {
 
     public SimplePathPicker(JFrame owner, Mode mode, String[] extensions) {
         super(owner, true);
+
         this.mode = mode;
         this.extensions = extensions;
+
         setUndecorated(true);
         setSize(700, 500);
         setLocationRelativeTo(owner);
@@ -60,10 +62,12 @@ public class SimplePathPicker extends JDialog {
 
         JPanel top = new JPanel(new BorderLayout(8, 8));
         top.setOpaque(false);
+
         pathField.setEditable(false);
         pathField.setBackground(new Color(30, 30, 30));
         pathField.setForeground(fg);
         pathField.setBorder(new LineBorder(border, 1, true));
+
         JButton upBtn = new JButton("Up");
         upBtn.setBackground(new Color(30, 30, 30));
         upBtn.setForeground(fg);
@@ -84,6 +88,7 @@ public class SimplePathPicker extends JDialog {
                 return lbl;
             }
         });
+
         list.setBackground(new Color(28, 28, 28));
         list.setForeground(fg);
         list.setSelectionBackground(new Color(60, 60, 60));
@@ -101,25 +106,30 @@ public class SimplePathPicker extends JDialog {
 
         JPanel bottom = new JPanel(new BorderLayout(8, 8));
         bottom.setOpaque(false);
+
         if(mode == Mode.SAVE_FILE) {
             nameField.setBackground(new Color(30, 30, 30));
             nameField.setForeground(fg);
             nameField.setBorder(new LineBorder(border, 1, true));
             bottom.add(nameField, BorderLayout.CENTER);
         }
+
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
         JButton cancel = new JButton("Cancel");
         JButton select = new JButton(mode == Mode.DIRECTORY ? "Select Folder" : mode == Mode.OPEN_FILE ? "Open" : "Save");
+
         for(JButton b : Arrays.asList(cancel, select)) {
             b.setBackground(new Color(30, 30, 30));
             b.setForeground(fg);
             b.setBorder(new LineBorder(accent, 1, true));
         }
+
         cancel.addActionListener(_ -> {
             result = null;
             dispose();
         });
+
         select.addActionListener(_ -> confirmSelection());
         actions.add(cancel);
         actions.add(select);
@@ -132,31 +142,40 @@ public class SimplePathPicker extends JDialog {
 
         File start = new File(System.getProperty("user.home"));
         if(owner != null && owner.getTitle() != null) setTitle(owner.getTitle());
+
         setDirectory(start);
     }
 
     private void setDirectory(File dir) {
         if(dir == null || !dir.isDirectory()) return;
+
         currentDir = dir;
         pathField.setText(dir.getAbsolutePath());
         listModel.clear();
+
         List<File> items = new ArrayList<>();
         File[] kids = dir.listFiles();
+
         if(kids != null) {
-            for(File f : kids) {
+            for(File f : kids)
                 if(f.isDirectory()) items.add(f);
-            }
+
             if(mode != Mode.DIRECTORY) {
-                for(File f : kids) {
+                for(File f : kids)
                     if(f.isFile() && acceptFile(f)) items.add(f);
-                }
             }
         }
+
         items.sort((a, b) -> {
-            if(a.isDirectory() && !b.isDirectory()) return -1;
-            if(!a.isDirectory() && b.isDirectory()) return 1;
+            if(a.isDirectory() && !b.isDirectory())
+                return -1;
+
+            if(!a.isDirectory() && b.isDirectory())
+                return 1;
+
             return a.getName().compareToIgnoreCase(b.getName());
         });
+
         for(File f : items) listModel.addElement(f);
     }
 

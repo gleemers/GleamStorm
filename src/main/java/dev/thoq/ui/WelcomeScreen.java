@@ -46,7 +46,6 @@ public class WelcomeScreen extends JFrame {
     private static final Color DARK_MENU_BG = new Color(24, 24, 24);
     private static final Color DARK_BORDER = new Color(30, 30, 30);
     private static final Color DARK_ACCENT = new Color(160, 160, 160);
-
     private static final Color LIGHT_BG = new Color(250, 250, 250);
     private static final Color LIGHT_FG = new Color(32, 32, 32);
     private static final Color LIGHT_MENU_BG = new Color(242, 242, 242);
@@ -112,10 +111,12 @@ public class WelcomeScreen extends JFrame {
         try {
             BufferedImage img = null;
             InputStream iconStream = getClass().getResourceAsStream("/icon.png");
+
             if(iconStream != null) {
                 img = ImageIO.read(iconStream);
                 iconStream.close();
             }
+
             if(img != null) {
                 setIconImage(img);
                 try {
@@ -129,14 +130,17 @@ public class WelcomeScreen extends JFrame {
 
     private JLabel buildLogoLabel() {
         Image image = null;
+
         try(InputStream is = getClass().getResourceAsStream("/gleamstorm_logo_text.png")) {
             if(is != null) {
                 image = ImageIO.read(is);
             }
         } catch(IOException ignored) {
         }
+
         if(image == null) {
             File f = new File("brand/gleamstorm_logo_text.png");
+
             if(f.exists()) {
                 try {
                     image = ImageIO.read(f);
@@ -144,12 +148,14 @@ public class WelcomeScreen extends JFrame {
                 }
             }
         }
+
         if(image == null) {
             try(InputStream is = getClass().getResourceAsStream("/icon.png")) {
                 if(is != null) image = ImageIO.read(is);
             } catch(IOException ignored) {
             }
         }
+
         JLabel label;
         if(image != null) {
             Image scaled = image.getScaledInstance(320, -1, Image.SCALE_SMOOTH);
@@ -158,7 +164,9 @@ public class WelcomeScreen extends JFrame {
             label = new JLabel("GleamStorm", SwingConstants.LEFT);
             label.setFont(new Font("SansSerif", Font.BOLD, 28));
         }
+
         label.setBorder(new EmptyBorder(10, 10, 20, 10));
+
         return label;
     }
 
@@ -167,6 +175,7 @@ public class WelcomeScreen extends JFrame {
         panel.setOpaque(false);
         panel.setLayout(new GridBagLayout());
         GridBagConstraints gbc = new GridBagConstraints();
+
         gbc.insets = new Insets(10, 10, 10, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.gridx = 0;
@@ -187,10 +196,13 @@ public class WelcomeScreen extends JFrame {
 
         gbc.gridy = 0;
         panel.add(newBtn, gbc);
+
         gbc.gridy = 1;
         panel.add(openBtn, gbc);
+
         gbc.gridy = 2;
         panel.add(cloneBtn, gbc);
+
         gbc.gridy = 3;
         panel.add(themeBtn, gbc);
 
@@ -202,6 +214,7 @@ public class WelcomeScreen extends JFrame {
         b.setFont(new Font("SansSerif", Font.BOLD, 16));
         b.setFocusPainted(false);
         b.setBorder(new CompoundBorder(new LineBorder(getAccentColor(), 1, true), new EmptyBorder(12, 16, 12, 16)));
+
         return b;
     }
 
@@ -210,6 +223,7 @@ public class WelcomeScreen extends JFrame {
         b.setFont(new Font("SansSerif", Font.PLAIN, 14));
         b.setFocusPainted(false);
         b.setBorder(new CompoundBorder(new LineBorder(getAccentColor(), 1, true), new EmptyBorder(10, 14, 10, 14)));
+
         return b;
     }
 
@@ -231,18 +245,19 @@ public class WelcomeScreen extends JFrame {
     private void styleTree(Component comp, Color bg, Color fg, Color menu, Color accent) {
         if(comp == null) return;
 
-        if(comp instanceof JPanel) {
+        if(comp instanceof JPanel)
             comp.setBackground(bg);
-        }
-        if(comp instanceof JLabel) {
+
+        if(comp instanceof JLabel)
             comp.setForeground(fg);
-        }
+
         if(comp instanceof JButton b) {
             b.setBackground(menu);
             b.setForeground(fg);
             b.setOpaque(true);
             b.setBorder(new CompoundBorder(new LineBorder(accent, 1, true), new EmptyBorder(10, 14, 10, 14)));
         }
+
         if(comp instanceof JTextField textField) {
             textField.setBackground(menu);
             textField.setForeground(fg);
@@ -250,6 +265,7 @@ public class WelcomeScreen extends JFrame {
             textField.setOpaque(true);
             textField.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(6, 8, 6, 8)));
         }
+
         if(comp instanceof JTextArea textArea) {
             textArea.setBackground(menu);
             textArea.setForeground(fg);
@@ -257,6 +273,7 @@ public class WelcomeScreen extends JFrame {
             textArea.setOpaque(true);
             textArea.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(6, 8, 6, 8)));
         }
+
         if(comp instanceof JPasswordField passwordField) {
             passwordField.setBackground(menu);
             passwordField.setForeground(fg);
@@ -264,25 +281,26 @@ public class WelcomeScreen extends JFrame {
             passwordField.setOpaque(true);
             passwordField.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(6, 8, 6, 8)));
         }
+
         if(comp instanceof JComboBox<?> comboBox) {
             comboBox.setBackground(menu);
             comboBox.setForeground(fg);
             comboBox.setOpaque(true);
             comboBox.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(4, 6, 4, 6)));
         }
+
         if(comp instanceof JScrollPane scrollPane) {
             scrollPane.setBackground(bg);
             scrollPane.getViewport().setBackground(bg);
             scrollPane.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(2, 2, 2, 2)));
         }
-        if(comp instanceof JComponent) {
+
+        if(comp instanceof JComponent)
             comp.setForeground(fg);
-        }
 
         if(comp instanceof Container) {
-            for(Component child : ((Container) comp).getComponents()) {
+            for(Component child : ((Container) comp).getComponents())
                 styleTree(child, bg, fg, menu, accent);
-            }
         }
     }
 
@@ -302,6 +320,7 @@ public class WelcomeScreen extends JFrame {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(new EmptyBorder(24, 24, 24, 24));
         GridBagConstraints gbc = new GridBagConstraints();
+
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.gridx = 0;
@@ -332,13 +351,15 @@ public class WelcomeScreen extends JFrame {
         gbc.weightx = 1;
         panel.add(dirField, gbc);
         JButton browse = new JButton("Browse...");
+
         browse.addActionListener(_ -> {
             dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
             java.io.File sel = picker.pick();
-            if(sel != null) {
+
+            if(sel != null)
                 dirField.setText(sel.getAbsolutePath());
-            }
         });
+
         gbc.gridx = 2;
         gbc.weightx = 0;
         panel.add(browse, gbc);
@@ -356,6 +377,7 @@ public class WelcomeScreen extends JFrame {
         JButton create = new JButton("Create Project");
         buttonRow.add(cancel);
         buttonRow.add(create);
+
         gbc.gridx = 0;
         gbc.gridy++;
         gbc.gridwidth = 3;
@@ -365,15 +387,18 @@ public class WelcomeScreen extends JFrame {
         create.addActionListener(_ -> {
             String name = nameField.getText().trim();
             String parent = dirField.getText().trim();
+
             if(name.isEmpty() || parent.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Please provide project name and location.", "Missing info", JOptionPane.WARNING_MESSAGE);
                 return;
             }
+
             File parentDir = new File(parent);
             if(!parentDir.isDirectory()) {
                 JOptionPane.showMessageDialog(this, "Invalid parent directory.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+
             File projectDir = new File(parentDir, name);
             if(initCheck.isSelected()) {
                 if(!projectDir.exists()) {
@@ -382,6 +407,7 @@ public class WelcomeScreen extends JFrame {
                         return;
                     }
                 }
+
                 runCommandAsync(new String[]{"gleam", "init", "--yes"}, projectDir, "Initializing Gleam project...", success -> {
                     if(success) openInEditor(projectDir);
                     else
@@ -392,6 +418,7 @@ public class WelcomeScreen extends JFrame {
                     JOptionPane.showMessageDialog(this, "Destination already exists.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
+
                 runCommandAsync(new String[]{"gleam", "new", name}, parentDir, "Creating Gleam project...", success -> {
                     if(success) openInEditor(projectDir);
                     else
@@ -407,6 +434,7 @@ public class WelcomeScreen extends JFrame {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(new EmptyBorder(24, 24, 24, 24));
         GridBagConstraints gbc = new GridBagConstraints();
+
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
         gbc.gridx = 0;
@@ -442,12 +470,14 @@ public class WelcomeScreen extends JFrame {
             java.io.File sel = picker.pick();
             if(sel != null) parentField.setText(sel.getAbsolutePath());
         });
+
         gbc.gridx = 2;
         gbc.weightx = 0;
         panel.add(browse, gbc);
 
         gbc.gridx = 0;
         gbc.gridy++;
+
         panel.add(new JLabel("Folder name (optional):"), gbc);
         JTextField folderField = new JTextField();
         gbc.gridx = 1;
@@ -460,6 +490,7 @@ public class WelcomeScreen extends JFrame {
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         JButton back = new JButton("Back");
         JButton clone = new JButton("Clone");
+
         buttonRow.add(back);
         buttonRow.add(clone);
         gbc.gridx = 0;
@@ -472,20 +503,24 @@ public class WelcomeScreen extends JFrame {
             String url = urlField.getText().trim();
             String parent = parentField.getText().trim();
             String name = folderField.getText().trim();
+
             if(url.isEmpty() || parent.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Please provide Git URL and parent folder.", "Missing info", JOptionPane.WARNING_MESSAGE);
                 return;
             }
+
             File parentDir = new File(parent);
             if(!parentDir.isDirectory()) {
                 JOptionPane.showMessageDialog(this, "Invalid parent directory.", "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
+
             java.util.List<String> cmd = new java.util.ArrayList<>();
             cmd.add("git");
             cmd.add("clone");
             cmd.add(url);
             File clonedDir;
+
             if(!name.isEmpty()) {
                 cmd.add(name);
                 clonedDir = new File(parentDir, name);
@@ -496,6 +531,7 @@ public class WelcomeScreen extends JFrame {
                 if(tail.endsWith(".git")) tail = tail.substring(0, tail.length() - 4);
                 clonedDir = new File(parentDir, tail);
             }
+
             runCommandAsync(cmd.toArray(new String[0]), parentDir, "Cloning repository...", success -> {
                 if(success && clonedDir.isDirectory()) openInEditor(clonedDir);
                 else JOptionPane.showMessageDialog(this, errorMessageFor("git"), "Git Error", JOptionPane.ERROR_MESSAGE);
@@ -508,14 +544,15 @@ public class WelcomeScreen extends JFrame {
         private void onOpenProject() {
         dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
         java.io.File sel = picker.pick();
-        if(sel != null) {
+
+        if(sel != null)
             openInEditor(sel);
-        }
     }
 
     private void runCommandAsync(String[] cmd, File workDir, String status, java.util.function.Consumer<Boolean> done) {
         Logger.info("Starting command: " + String.join(" ", cmd) + " in " + workDir.getAbsolutePath());
         JDialog progress = buildProgressDialog(status);
+
         new Thread(() -> {
             boolean ok = runCommand(cmd, workDir);
             SwingUtilities.invokeLater(() -> {
@@ -531,6 +568,7 @@ public class WelcomeScreen extends JFrame {
         ProcessBuilder pb = new ProcessBuilder(cmd);
         pb.directory(workDir);
         pb.redirectErrorStream(true);
+
         try {
             Process p = pb.start();
 
@@ -561,6 +599,7 @@ public class WelcomeScreen extends JFrame {
                 p.destroyForcibly();
                 return false;
             }
+
             int code = p.exitValue();
             return code == 0;
         } catch(IOException | InterruptedException e) {
@@ -596,6 +635,7 @@ public class WelcomeScreen extends JFrame {
         d.getContentPane().add(p);
         d.pack();
         d.setLocationRelativeTo(this);
+
         return d;
     }
 

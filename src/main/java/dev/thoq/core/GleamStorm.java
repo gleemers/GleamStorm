@@ -18,9 +18,9 @@
 
 package dev.thoq.core;
 
+import dev.thoq.integration.erlang.ErlangSyntaxHighlighter;
 import dev.thoq.integration.gleam.GleamLSPClient;
 import dev.thoq.integration.gleam.GleamSyntaxHighlighter;
-import dev.thoq.integration.erlang.ErlangSyntaxHighlighter;
 import dev.thoq.integration.highlight.ISyntaxHighlighter;
 import dev.thoq.integration.lsp.RDiagnostic;
 import dev.thoq.ui.CustomScrollBarUI;
@@ -36,7 +36,8 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.text.*;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.Highlighter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
@@ -49,7 +50,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.List;
 
@@ -182,7 +182,7 @@ public class GleamStorm extends JFrame {
 
         highlightTimer = new Timer(300, _ -> {
             syntaxHighlighter.highlight(textPane);
-            if(lspClient != null && lspClient.isConnected() && isGleamFile(currentFile)) {
+            if(lspClient != null && lspClient.isConnected() && FileTypeUtil.isGleamFile(currentFile)) {
                 lspClient.checkSyntax(currentFile.getAbsolutePath(), textPane.getText());
             }
         });
@@ -285,20 +285,9 @@ public class GleamStorm extends JFrame {
         lspClient = new GleamLSPClient();
     }
 
-    private boolean isGleamFile(File f) {
-        if(f == null) return false;
-        String name = f.getName().toLowerCase();
-        return name.endsWith(".gleam");
-    }
-
-    private boolean isErlangFile(File f) {
-        if(f == null) return false;
-        String n = f.getName().toLowerCase();
-        return n.endsWith(".erl") || n.endsWith(".hrl") || n.endsWith(".xrl") || n.endsWith(".yrl");
-    }
 
     private void setHighlighterForFile(File f) {
-        if(isErlangFile(f)) {
+        if(FileTypeUtil.isErlangFile(f)) {
             if(!(syntaxHighlighter instanceof ErlangSyntaxHighlighter)) {
                 syntaxHighlighter = new ErlangSyntaxHighlighter();
             }
@@ -993,7 +982,6 @@ public class GleamStorm extends JFrame {
                 statusLabel.setText(" Opened: " + currentFile.getName());
                 textPane.requestFocus();
 
-                // Switch syntax highlighter based on file type
                 setHighlighterForFile(currentFile);
                 syntaxHighlighter.setTheme(isDarkTheme);
                 syntaxHighlighter.highlight(textPane);
@@ -1011,7 +999,7 @@ public class GleamStorm extends JFrame {
                 }
 
                 assert lspClient != null;
-                if(isGleamFile(currentFile) && lspClient.isConnected()) {
+                if(FileTypeUtil.isGleamFile(currentFile) && lspClient.isConnected()) {
                     lspClient.openDocument(currentFile.getAbsolutePath(), content);
                 }
             } catch(IOException e) {
@@ -1031,7 +1019,7 @@ public class GleamStorm extends JFrame {
             Files.write(currentFile.toPath(), textPane.getText().getBytes());
             statusLabel.setText(" Saved: " + currentFile.getName());
 
-            if(isGleamFile(currentFile) && lspClient.isConnected()) {
+            if(FileTypeUtil.isGleamFile(currentFile) && lspClient.isConnected()) {
                 lspClient.saveDocument(currentFile.getAbsolutePath(), textPane.getText());
             }
         } catch(IOException e) {
@@ -1051,13 +1039,13 @@ public class GleamStorm extends JFrame {
     }
 
     private void formatDocument() {
-        if(isGleamFile(currentFile) && lspClient.isConnected()) {
+        if(FileTypeUtil.isGleamFile(currentFile) && lspClient.isConnected()) {
             String formatted = lspClient.formatDocument(currentFile.getAbsolutePath());
             if(formatted != null) {
                 textPane.setText(formatted);
                 statusLabel.setText(" Document formatted");
             }
-        } else if(isErlangFile(currentFile)) {
+        } else if(FileTypeUtil.isErlangFile(currentFile)) {
             statusLabel.setText(" Formatting not available for Erlang in this editor");
         } else {
             statusLabel.setText(" LSP not connected - cannot format");
@@ -1073,32 +1061,11 @@ public class GleamStorm extends JFrame {
         }
     }
 
-    private DefaultMutableTreeNode buildNode(File file) {
-        DefaultMutableTreeNode node = new DefaultMutableTreeNode(file);
-        if(file.isDirectory()) {
-            buildFileTreeNode(file, node);
-        }
-        return node;
-    }
-
-    private void buildFileTreeNode(File file, DefaultMutableTreeNode node) {
-        File[] children = file.listFiles();
-        if(children != null) {
-            Arrays.sort(children, (a, b) -> {
-                if(a.isDirectory() && !b.isDirectory()) return -1;
-                if(!a.isDirectory() && b.isDirectory()) return 1;
-                return a.getName().compareToIgnoreCase(b.getName());
-            });
-            for(File child : children) {
-                node.add(buildNode(child));
-            }
-        }
-    }
 
     private void refreshFileTree() {
         if(currentFolder != null && fileTree != null) {
             DefaultMutableTreeNode root = new DefaultMutableTreeNode(currentFolder.getName());
-            buildFileTreeNode(currentFolder, root);
+            dev.thoq.core.FileTreeBuilder.buildFileTreeNode(currentFolder, root);
             treeModel.setRoot(root);
             fileTree.setRootVisible(true);
 
@@ -1120,7 +1087,7 @@ public class GleamStorm extends JFrame {
             syntaxHighlighter.setTheme(isDarkTheme);
             syntaxHighlighter.highlight(textPane);
 
-            if(isGleamFile(currentFile) && lspClient.isConnected()) {
+            if(FileTypeUtil.isGleamFile(currentFile) && lspClient.isConnected()) {
                 lspClient.openDocument(currentFile.getAbsolutePath(), content);
             }
         } catch(IOException e) {
@@ -1211,8 +1178,8 @@ public class GleamStorm extends JFrame {
 
         String firstMsg = null;
         for(RDiagnostic d : diagnostics) {
-            int start = offsetFromLineChar(text, d.startLine(), d.startChar());
-            int end = offsetFromLineChar(text, d.endLine(), d.endChar());
+            int start = TextPositionUtil.offsetFromLineChar(text, d.startLine(), d.startChar());
+            int end = TextPositionUtil.offsetFromLineChar(text, d.endLine(), d.endChar());
             if(end < start) {
                 int tmp = start;
                 start = end;
@@ -1236,29 +1203,6 @@ public class GleamStorm extends JFrame {
         }
     }
 
-    private int offsetFromLineChar(String text, int line, int ch) {
-        if(text == null) return 0;
-        if(line < 0) line = 0;
-        if(ch < 0) ch = 0;
-        int idx = 0;
-        int currentLine = 0;
-        int len = text.length();
-        while(currentLine < line && idx < len) {
-            int nl = text.indexOf('\n', idx);
-            if(nl == -1) {
-                idx = len;
-                break;
-            }
-            idx = nl + 1;
-            currentLine++;
-        }
-        int lineEnd = text.indexOf('\n', idx);
-        if(lineEnd == -1) lineEnd = len;
-        int offset = idx + ch;
-        if(offset > lineEnd) offset = lineEnd;
-        if(offset < 0) offset = 0;
-        return offset;
-    }
 
     private void clearDiagnosticHighlights() {
         Highlighter hl = textPane.getHighlighter();
@@ -1271,26 +1215,9 @@ public class GleamStorm extends JFrame {
         diagnosticHighlights.clear();
     }
 
-    private int[] lineCharFromOffset(String text, int offset) {
-        if(text == null) return new int[]{0, 0};
-        int len = text.length();
-        if(offset < 0) offset = 0;
-        if(offset > len) offset = len;
-        int line = 0;
-        int lastNl = -1;
-        for(int i = 0; i < offset; i++) {
-            if(text.charAt(i) == '\n') {
-                line++;
-                lastNl = i;
-            }
-        }
-        int ch = offset - (lastNl + 1);
-        if(lastNl == -1) ch = offset;
-        return new int[]{line, ch};
-    }
-
     private void triggerHoverLookup() {
-        if(lspClient == null || !lspClient.isConnected() || lastMousePoint == null || !isGleamFile(currentFile)) return;
+        if(lspClient == null || !lspClient.isConnected() || lastMousePoint == null || !FileTypeUtil.isGleamFile(currentFile))
+            return;
         int offset = textPane.viewToModel(lastMousePoint);
         if(offset < 0) return;
         if(offset == lastHoverOffset) return;
@@ -1301,106 +1228,11 @@ public class GleamStorm extends JFrame {
         } catch(BadLocationException e) {
             return;
         }
-        int[] lc = lineCharFromOffset(text, offset);
+        int[] lc = TextPositionUtil.lineCharFromOffset(text, offset);
         lspClient.requestHover(currentFile.getAbsolutePath(), lc[0], lc[1], result -> SwingUtilities.invokeLater(() -> {
-            hoverText = (result != null && !result.trim().isEmpty()) ? formatHoverHtml(result) : null;
+            hoverText = (result != null && !result.trim().isEmpty()) ? HoverHtmlFormatter.formatHoverHtml(result) : null;
             textPane.setToolTipText(hoverText);
         }));
     }
 
-    private String formatHoverHtml(String md) {
-        if(md == null || md.isEmpty()) return null;
-        String text = md.replace("\r\n", "\n");
-
-        String fg = isDarkTheme ? "#e6e6e6" : "#202020";
-        String codeBg = isDarkTheme ? "#2b2b2b" : "#f0f0f0";
-        String containerStyle = "font-family:'Inter','Segoe UI',Arial,sans-serif; font-size: 15px; line-height:1.35; color:" + fg + "; max-width: 560px; white-space: normal; word-wrap: break-word;";
-        String codeInlineStyle = "font-family:'JetBrains Mono','Menlo','Consolas',monospace; font-size: 14px; background-color:" + codeBg + "; padding:2px 4px; border-radius:4px;";
-        String codeBlockStyle = "font-family:'JetBrains Mono','Menlo','Consolas',monospace; font-size: 13px; background-color:" + codeBg + "; padding:8px; border-radius:6px; margin:6px 0; white-space: pre-wrap; overflow-wrap: anywhere;";
-
-        java.util.regex.Pattern fence = java.util.regex.Pattern.compile("(?s)```[a-zA-Z0-9_+\\-]*\\n(.*?)\\n```\\s*");
-        java.util.regex.Matcher m = fence.matcher(text);
-        int last = 0;
-        StringBuilder html = new StringBuilder();
-        html.append("<html><div style=\"").append(containerStyle).append("\">");
-        while(m.find()) {
-            String before = text.substring(last, m.start());
-            if(!before.isEmpty()) html.append(formatInlineWithEscape(before, codeInlineStyle));
-            String code = m.group(1);
-            html.append("<pre style=\"").append(codeBlockStyle).append("\"><code>")
-                    .append(escapeHtml(code))
-                    .append("</code></pre>");
-            last = m.end();
-        }
-        String tail = text.substring(last);
-        if(!tail.isEmpty()) html.append(formatInlineWithEscape(tail, codeInlineStyle));
-        html.append("</div></html>");
-        return html.toString();
-    }
-
-    private String formatInlineWithEscape(String text, String codeInlineStyle) {
-        if(text == null || text.isEmpty()) return "";
-        StringBuilder out = new StringBuilder();
-        boolean inCode = false;
-        StringBuilder buf = new StringBuilder();
-        for(int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if(c == '`') {
-                if(inCode) {
-                    String code = buf.toString();
-                    out.append("<code style=\"").append(codeInlineStyle).append("\">")
-                            .append(escapeHtml(code).replace("\n", "<br/>"))
-                            .append("</code>");
-                    buf.setLength(0);
-                    inCode = false;
-                } else {
-                    if(!buf.isEmpty()) {
-                        out.append(escapeHtml(buf.toString()).replace("\n", "<br/>"));
-                        buf.setLength(0);
-                    }
-                    inCode = true;
-                }
-            } else {
-                buf.append(c);
-            }
-        }
-        if(!buf.isEmpty()) {
-            if(inCode) {
-                out.append("<code style=\"").append(codeInlineStyle).append("\">")
-                        .append(escapeHtml(buf.toString()).replace("\n", "<br/>"))
-                        .append("</code>");
-            } else {
-                out.append(escapeHtml(buf.toString()).replace("\n", "<br/>"));
-            }
-        }
-        return out.toString();
-    }
-
-    private static String escapeHtml(String s) {
-        if(s == null) return "";
-        StringBuilder sb = new StringBuilder(s.length());
-        for(int i = 0; i < s.length(); i++) {
-            char ch = s.charAt(i);
-            switch(ch) {
-                case '&':
-                    sb.append("&amp;");
-                    break;
-                case '<':
-                    sb.append("&lt;");
-                    break;
-                case '>':
-                    sb.append("&gt;");
-                    break;
-                case '"':
-                    sb.append("&quot;");
-                    break;
-                case '\'':
-                    sb.append("&#39;");
-                    break;
-                default:
-                    sb.append(ch);
-            }
-        }
-        return sb.toString();
-    }
 }

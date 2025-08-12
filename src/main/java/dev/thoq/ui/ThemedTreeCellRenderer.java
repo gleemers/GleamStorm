@@ -46,9 +46,9 @@ public class ThemedTreeCellRenderer extends DefaultTreeCellRenderer {
 
         if(value instanceof DefaultMutableTreeNode node) {
             Object uo = node.getUserObject();
-            if(uo instanceof File file) {
+
+            if(uo instanceof File file)
                 setText(file.getName().isEmpty() ? file.getPath() : file.getName());
-            }
         }
         return c;
     }

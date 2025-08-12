@@ -89,7 +89,7 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
                 }
             } catch(IOException e) {
                 if(debugMode && connected.get()) {
-                    System.err.println("LSP connection lost: " + e.getMessage());
+                    Logger.error("LSP connection lost: " + e.getMessage());
                 }
                 connected.set(false);
             }
@@ -302,9 +302,9 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             Thread.sleep(100);
 
             if(!lspProcess.isAlive()) {
-                if(debugMode) {
+                if(debugMode)
                     Logger.info("Process failed to start");
-                }
+
                 return false;
             }
 
@@ -317,7 +317,7 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
                     String line;
                     while((line = errorReader.readLine()) != null) {
                         if(debugMode && !line.trim().isEmpty()) {
-                            System.err.println("LSP Error: " + line);
+                            Logger.error("LSP Error: " + line);
                         }
                     }
                 } catch(IOException e) {
@@ -330,9 +330,8 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             startResponseHandler();
 
             if(sendInitializeRequest()) {
-                if(debugMode) {
+                if(debugMode)
                     Logger.info("Successfully connected to Gleam LSP with command: " + String.join(" ", command));
-                }
                 return true;
             } else {
                 connected.set(false);
@@ -340,15 +339,16 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             }
 
         } catch(Exception e) {
-            if(debugMode) {
+            if(debugMode)
                 Logger.info("Command failed: " + e.getMessage());
-            }
+
             connected.set(false);
             if(lspProcess != null) {
                 lspProcess.destroyForcibly();
                 lspProcess = null;
             }
         }
+
         return false;
     }
 
@@ -365,11 +365,11 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             Logger.info("PATH: " + System.getenv("PATH"));
 
             File gleamToml = new File("gleam.toml");
-            if(gleamToml.exists()) {
+
+            if(gleamToml.exists())
                 Logger.info("gleam.toml found: YES");
-            } else {
+            else
                 Logger.info("gleam.toml found: NO (LSP may not work properly)");
-            }
 
             testGleamInstallation();
 
@@ -385,6 +385,7 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
                 return false;
             }
         }
+
         return isConnected();
     }
 
@@ -397,16 +398,16 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             String line = reader.readLine();
 
-            if(line != null) {
+            if(line != null)
                 Logger.info("Gleam version: " + line);
-            } else {
+            else
                 Logger.info("Gleam version: Could not determine");
-            }
 
             boolean finished = process.waitFor(5, TimeUnit.SECONDS);
-            if(!finished) {
+
+            if(!finished)
                 Logger.info("Version check timed out");
-            }
+
         } catch(Exception e) {
             Logger.info("Gleam installation check failed: " + e.getMessage());
             Logger.info("Install Gleam: brew install gleam (macOS) or https://gleam.run/getting-started/installing/");
@@ -424,9 +425,8 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
                     .replace("\"processId\": null", "\"processId\": " + ProcessHandle.current().pid())
                     .replace("\"rootUri\": null", "\"rootUri\": \"" + rootUri + "\"");
 
-            if(debugMode) {
+            if(debugMode)
                 Logger.info("Initializing LSP with rootUri: " + rootUri);
-            }
 
             sendRequestDirect(initRequest);
             Thread.sleep(500);
@@ -434,24 +434,23 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             String initializedRequest = loadTemplate("initialized.json");
             sendNotificationDirect("initialized", initializedRequest);
 
-            if(debugMode) {
+            if(debugMode)
                 Logger.info("Initialize request sent successfully");
-            }
 
             return true;
         } catch(Exception e) {
-            if(debugMode) {
-                System.err.println("Failed to send initialize request: " + e.getMessage());
-            }
+            if(debugMode)
+                Logger.error("Failed to send initialize request: " + e.getMessage());
+
             return false;
         }
     }
 
     private String loadTemplate(String filename) throws IOException {
         try(InputStream is = getClass().getResourceAsStream("/lsp/gleam/" + filename)) {
-            if(is == null) {
+            if(is == null)
                 throw new IOException("Template not found: " + filename);
-            }
+
             return new String(is.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
         }
     }
@@ -459,17 +458,18 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
     private synchronized void sendRequestDirect(String content) throws IOException {
         byte[] bytes = content.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         String message = "Content-Length: " + bytes.length + "\r\n\r\n" + content;
-        if(debugMode && requestId <= 3) {
+
+        if(debugMode && requestId <= 3)
             Logger.info("Sending LSP request: " + message);
-        }
+
         writer.write(message);
         writer.flush();
     }
 
     private synchronized void sendRequest(String content) throws IOException {
-        if(!isConnected()) {
+        if(!isConnected())
             throw new IOException("LSP not connected");
-        }
+
         sendRequestDirect(content);
     }
 
@@ -501,9 +501,9 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
 
             sendNotification("textDocument/didOpen", params);
         } catch(IOException e) {
-            if(debugMode) {
-                System.err.println("Failed to open document: " + e.getMessage());
-            }
+            if(debugMode)
+                Logger.error("Failed to open document: " + e.getMessage());
+
             connected.set(false);
         }
     }
@@ -520,9 +520,9 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
 
             sendNotification("textDocument/didSave", params);
         } catch(IOException e) {
-            if(debugMode) {
-                System.err.println("Failed to save document: " + e.getMessage());
-            }
+            if(debugMode)
+                Logger.error("Failed to save document: " + e.getMessage());
+
             connected.set(false);
         }
     }
@@ -543,7 +543,7 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             return null;
         } catch(IOException e) {
             if(debugMode) {
-                System.err.println("Failed to format document: " + e.getMessage());
+                Logger.error("Failed to format document: " + e.getMessage());
             }
             connected.set(false);
             return null;
@@ -555,8 +555,10 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             if(callback != null) try { callback.accept(null); } catch (Exception ignored) {}
             return;
         }
+
         int id = ++requestId;
         if(callback != null) hoverCallbacks.put(id, callback);
+
         try {
             String uri = "file://" + filePath.replace("\\", "/");
             String params = "{\n" +
@@ -584,6 +586,7 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
 
         try {
             String uri = "file://" + filePath.replace("\\", "/");
+
             if(!uri.equals(currentDocUri)) {
                 currentDocUri = uri;
                 currentDocVersion = 1;
@@ -600,11 +603,12 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
                     .replace("\"text\": null", "\"text\": \"" + escapeJson(content) + "\"");
 
             sendNotification("textDocument/didChange", params);
+
             return true;
         } catch(IOException e) {
-            if(debugMode) {
-                System.err.println("Failed to check syntax: " + e.getMessage());
-            }
+            if(debugMode)
+                Logger.error("Failed to check syntax: " + e.getMessage());
+
             connected.set(false);
             return false;
         }
@@ -632,19 +636,18 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
 
     public void disconnect() {
         connected.set(false);
-        if(responseHandler != null) {
+        if(responseHandler != null)
             responseHandler.interrupt();
-        }
-        if(lspProcess != null) {
+
+        if(lspProcess != null)
             lspProcess.destroyForcibly();
-        }
+
         try {
             if(writer != null) writer.close();
             if(inputStream != null) inputStream.close();
         } catch(IOException e) {
-            if(debugMode) {
-                System.err.println("Error closing LSP connections: " + e.getMessage());
-            }
+            if(debugMode)
+                Logger.error("Error closing LSP connections: " + e.getMessage());
         }
     }
 

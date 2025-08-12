@@ -61,6 +61,7 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
 
     private void buildPatterns() {
         StringBuilder keywordBuilder = new StringBuilder("\\b(");
+
         for (int i = 0; i < KEYWORDS.length; i++) {
             keywordBuilder.append(KEYWORDS[i]);
             if (i < KEYWORDS.length - 1) keywordBuilder.append("|");
@@ -73,6 +74,7 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
 
         for (int i = 0; i < TYPES.length; i++) {
             typeBuilder.append(TYPES[i]);
+
             if (i < TYPES.length - 1)
                 typeBuilder.append("|");
         }
@@ -134,7 +136,6 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
 
         doc.setCharacterAttributes(0, text.length(), defaultStyle, true);
 
-        // Apply non-comment highlights first
         highlightPattern(doc, text, stringPattern, stringStyle);
         highlightPattern(doc, text, keywordPattern, keywordStyle);
         highlightPattern(doc, text, typePattern, typeStyle);
@@ -142,15 +143,14 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
         highlightPattern(doc, text, numberPattern, numberStyle);
         highlightPattern(doc, text, operatorPattern, operatorStyle);
         highlightFunctionCalls(doc, text);
-        // Comments last so they override any prior styling
         highlightPattern(doc, text, commentPattern, commentStyle);
     }
 
     private void highlightPattern(StyledDocument doc, String text, Pattern pattern, Style style) {
         Matcher matcher = pattern.matcher(text);
-        while (matcher.find()) {
+
+        while (matcher.find())
             doc.setCharacterAttributes(matcher.start(), matcher.end() - matcher.start(), style, false);
-        }
     }
 
     private void highlightFunctionCalls(StyledDocument doc, String text) {
@@ -158,20 +158,22 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
         while (m.find()) {
             int start = m.start(1);
             int end = m.end(1);
-            String name = text.substring(start, end);
             int lookBack = Math.max(0, start - 5);
+
+            String name = text.substring(start, end);
             String prefix = text.substring(lookBack, start);
-            if (prefix.matches(".*\\bfn\\s+$") || isKeyword(name)) {
+
+            if (prefix.matches(".*\\bfn\\s+$") || isKeyword(name))
                 continue;
-            }
+
             doc.setCharacterAttributes(start, end - start, functionStyle, false);
         }
     }
 
     private boolean isKeyword(String s) {
-        for (String k : KEYWORDS) {
+        for (String k : KEYWORDS)
             if (k.equals(s)) return true;
-        }
+
         return false;
     }
 

@@ -34,12 +34,9 @@ public final class Logger {
     private static final String LOG_DIR = System.getProperty("user.home") + File.separator + ".gleamstorm";
     private static final String LOG_FILE = LOG_DIR + File.separator + "gleamstorm.log";
     private static final long MAX_BYTES = 1_000_000L;
-
     private static final SimpleDateFormat TS = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
-
     private static final ReentrantLock LOCK = new ReentrantLock();
     private static BufferedWriter writer;
-
     private static volatile Level consoleLevel = Level.DEBUG;
     private static volatile Level fileLevel = Level.DEBUG;
 
@@ -93,16 +90,20 @@ public final class Logger {
             LOCK.lock();
             try {
                 ensureWriter();
+
                 writer.write(line);
                 writer.newLine();
+
                 if(t != null) {
                     writer.write(String.valueOf(t));
                     writer.newLine();
+
                     for(StackTraceElement el : t.getStackTrace()) {
                         writer.write("    at " + el.toString());
                         writer.newLine();
                     }
                 }
+
                 writer.flush();
                 rotateIfNeeded();
             } catch(IOException ignored) {
@@ -129,12 +130,14 @@ public final class Logger {
 
     private static void ensureWriter() {
         LOCK.lock();
+
         try {
             if(writer == null) {
                 try {
                     File dir = new File(LOG_DIR);
-                    if(!dir.exists()) //noinspection ResultOfMethodCallIgnored
+                    if(!dir.exists())
                         dir.mkdirs();
+
                     File f = new File(LOG_FILE);
                     writer = new BufferedWriter(new FileWriter(f, true));
                 } catch(IOException ignored) {
@@ -147,6 +150,7 @@ public final class Logger {
 
     private static void rotateIfNeeded() {
         File f = new File(LOG_FILE);
+
         if(f.length() > MAX_BYTES) {
             try {
                 writer.close();

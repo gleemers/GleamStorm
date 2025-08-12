@@ -47,27 +47,33 @@ public class SquigglePainter extends LayeredHighlighter.LayerPainter implements 
     }
 
     private void paintSquiggle(Graphics g, Shape s) {
-        if(s == null) return;
+        if(s == null)
+            return;
+
         Rectangle r = (s instanceof Rectangle) ? (Rectangle) s : s.getBounds();
         Graphics2D g2 = (Graphics2D) g;
         Color old = g2.getColor();
         Object aa = g2.getRenderingHint(RenderingHints.KEY_ANTIALIASING);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
         g2.setColor(color);
+
         int baselineY = r.y + r.height - 2;
         int x = r.x;
         int end = r.x + r.width;
         int step = Math.max(2, wavelength / 2);
-        boolean up = true;
         int prevX = x;
         int prevY = baselineY;
+        boolean up = true;
+
         for(int i = x; i <= end; i += step) {
             int ny = baselineY + (up ? -amplitude : amplitude);
+
             g2.drawLine(prevX, prevY, i, ny);
             prevX = i;
             prevY = ny;
             up = !up;
         }
+
         g2.drawLine(prevX, prevY, end, baselineY);
         g2.setColor(old);
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, aa);

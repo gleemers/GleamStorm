@@ -26,6 +26,7 @@ import java.awt.*;
 public class Main {
     public static void main(String[] args) {
         Logger.info("GleamStorm starting...");
+
         if (System.getProperty("os.name").toLowerCase().contains("mac")) {
             System.setProperty("apple.laf.useScreenMenuBar", "true");
             System.setProperty("apple.awt.application.name", "GleamStorm");
@@ -46,3 +47,4 @@ public class Main {
         });
     }
 }
+

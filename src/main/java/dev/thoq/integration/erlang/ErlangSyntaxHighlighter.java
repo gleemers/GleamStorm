@@ -28,9 +28,7 @@ import java.util.regex.Pattern;
 public class ErlangSyntaxHighlighter implements ISyntaxHighlighter {
     private boolean isDarkTheme = true;
 
-    private static final String[] KEYWORDS = {
-            "after", "begin", "case", "catch", "end", "fun", "if", "let", "of", "receive", "try", "when", "andalso", "orelse", "div", "rem", "band", "bor", "bxor", "bnot", "not"
-    };
+    private static final String[] KEYWORDS = {"after", "begin", "case", "catch", "end", "fun", "if", "let", "of", "receive", "try", "when", "andalso", "orelse", "div", "rem", "band", "bor", "bxor", "bnot", "not"};
 
     private Pattern keywordPattern;
     private Pattern atomPattern;
@@ -40,7 +38,6 @@ public class ErlangSyntaxHighlighter implements ISyntaxHighlighter {
     private Pattern numberPattern;
     private Pattern operatorPattern;
     private Pattern functionCallPattern;
-
     private Style keywordStyle;
     private Style atomStyle;
     private Style varStyle;
@@ -58,13 +55,16 @@ public class ErlangSyntaxHighlighter implements ISyntaxHighlighter {
 
     private void buildPatterns() {
         StringBuilder kw = new StringBuilder("\\b(");
+
         for(int i = 0; i < KEYWORDS.length; i++) {
             kw.append(KEYWORDS[i]);
+
             if(i < KEYWORDS.length - 1) kw.append("|");
         }
-        kw.append(")\\b");
-        keywordPattern = Pattern.compile(kw.toString());
 
+        kw.append(")\\b");
+
+        keywordPattern = Pattern.compile(kw.toString());
         atomPattern = Pattern.compile("'[^'\\n]*'|\\b[a-z][a-zA-Z0-9_@]*\\b");
         varPattern = Pattern.compile("\\b[_A-Z][A-Za-z0-9_]*\\b");
         stringPattern = Pattern.compile("\"([^\\\\\"]|\\\\.)*\"");
@@ -76,6 +76,7 @@ public class ErlangSyntaxHighlighter implements ISyntaxHighlighter {
 
     private void createStyles() {
         StyleContext context = StyleContext.getDefaultStyleContext();
+
         defaultStyle = context.getStyle(StyleContext.DEFAULT_STYLE);
         keywordStyle = context.addStyle("erlang-keyword", null);
         atomStyle = context.addStyle("erlang-atom", null);
@@ -85,6 +86,7 @@ public class ErlangSyntaxHighlighter implements ISyntaxHighlighter {
         numberStyle = context.addStyle("erlang-number", null);
         operatorStyle = context.addStyle("erlang-operator", null);
         functionStyle = context.addStyle("erlang-function", null);
+
         updateStyleColors();
     }
 
@@ -110,6 +112,7 @@ public class ErlangSyntaxHighlighter implements ISyntaxHighlighter {
     public void highlight(JTextPane textPane) {
         StyledDocument doc = textPane.getStyledDocument();
         String text;
+
         try {
             text = doc.getText(0, doc.getLength());
         } catch(BadLocationException e) {
@@ -129,13 +132,13 @@ public class ErlangSyntaxHighlighter implements ISyntaxHighlighter {
 
     private void highlightPattern(StyledDocument doc, String text, Pattern pattern, Style style) {
         Matcher m = pattern.matcher(text);
-        while(m.find()) {
-            doc.setCharacterAttributes(m.start(), m.end() - m.start(), style, false);
-        }
+
+        while(m.find()) doc.setCharacterAttributes(m.start(), m.end() - m.start(), style, false);
     }
 
     private void highlightFunctionCalls(StyledDocument doc, String text) {
         Matcher m = functionCallPattern.matcher(text);
+
         while(m.find()) {
             int start = m.start(1);
             int end = m.end(1);
