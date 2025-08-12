@@ -1,4 +1,4 @@
-package dev.thoq;
+package dev.thoq.integration.gleam;
 
 import javax.swing.*;
 import javax.swing.text.*;

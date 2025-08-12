@@ -1,4 +1,4 @@
-package dev.thoq;
+package dev.thoq.integration.gleam;
 
 import dev.thoq.log.Logger;
 
@@ -33,7 +33,7 @@ public class GleamLSPClient {
         }
 
         if(debugMode) {
-            Logger.info("Direct gleam lsp failed, trying alternative methods...");
+            Logger.info("Direct gleam integration failed, trying alternative methods...");
         }
 
         if(tryAlternativeCommands()) {
@@ -72,7 +72,7 @@ public class GleamLSPClient {
     }
 
     private boolean tryGleamLSP() {
-        return tryCommand(new String[]{"gleam", "lsp"}) ||
+        return tryCommand(new String[]{"gleam", "integration"}) ||
                 tryCommand(new String[]{"gleam", "language-server"});
     }
 
@@ -80,16 +80,16 @@ public class GleamLSPClient {
         String os = System.getProperty("os.name").toLowerCase();
 
         if(os.contains("win")) {
-            return tryCommand(new String[]{"cmd", "/c", "gleam", "lsp"}) ||
-                    tryCommand(new String[]{"powershell", "-Command", "gleam", "lsp"}) ||
-                    tryCommand(new String[]{"gleam.exe", "lsp"});
+            return tryCommand(new String[]{"cmd", "/c", "gleam", "integration"}) ||
+                    tryCommand(new String[]{"powershell", "-Command", "gleam", "integration"}) ||
+                    tryCommand(new String[]{"gleam.exe", "integration"});
         } else {
-            return tryCommand(new String[]{"sh", "-c", "gleam lsp"}) ||
-                    tryCommand(new String[]{"bash", "-c", "gleam lsp"}) ||
-                    tryCommand(new String[]{"/usr/local/bin/gleam", "lsp"}) ||
-                    tryCommand(new String[]{"/opt/homebrew/bin/gleam", "lsp"}) ||
-                    tryCommand(new String[]{System.getProperty("user.home") + "/.gleam/bin/gleam", "lsp"}) ||
-                    tryCommand(new String[]{"./gleam", "lsp"});
+            return tryCommand(new String[]{"sh", "-c", "gleam integration"}) ||
+                    tryCommand(new String[]{"bash", "-c", "gleam integration"}) ||
+                    tryCommand(new String[]{"/usr/local/bin/gleam", "integration"}) ||
+                    tryCommand(new String[]{"/opt/homebrew/bin/gleam", "integration"}) ||
+                    tryCommand(new String[]{System.getProperty("user.home") + "/.gleam/bin/gleam", "integration"}) ||
+                    tryCommand(new String[]{"./gleam", "integration"});
         }
     }
 

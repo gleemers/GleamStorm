@@ -1,6 +1,6 @@
 package dev.thoq.ui;
 
-import dev.thoq.GleamStorm;
+import dev.thoq.core.GleamStorm;
 import dev.thoq.log.Logger;
 
 import javax.imageio.ImageIO;

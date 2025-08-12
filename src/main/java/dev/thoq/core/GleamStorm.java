@@ -1,5 +1,7 @@
-package dev.thoq;
+package dev.thoq.core;
 
+import dev.thoq.integration.gleam.GleamLSPClient;
+import dev.thoq.integration.gleam.GleamSyntaxHighlighter;
 import dev.thoq.ui.CustomScrollBarUI;
 import dev.thoq.ui.CustomTitleBar;
 import dev.thoq.ui.ThemedTreeCellRenderer;
@@ -27,6 +29,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 @SuppressWarnings({"CallToPrintStackTrace", "deprecation"})
@@ -235,26 +238,35 @@ public class GleamStorm extends JFrame {
 
     private void performSuggestionCheck() {
         try {
-            int caretPos = textPane.getCaretPosition();
-            String text = textPane.getText();
-
-            if(caretPos > 0 && caretPos <= text.length()) {
-                int wordStart = Math.max(0, caretPos - 10);
-                String recentText = text.substring(wordStart, caretPos);
-
-                int lastSpace = Math.max(recentText.lastIndexOf(' '),
-                        Math.max(recentText.lastIndexOf('\n'),
-                                recentText.lastIndexOf('\t')));
-                String currentWord = recentText.substring(lastSpace + 1);
-
-                if(!currentWord.isEmpty() && currentWord.length() <= 15) {
-                    SwingUtilities.invokeLater(() -> showSuggestionsForWord(currentWord));
-                } else {
-                    SwingUtilities.invokeLater(this::hideSuggestions);
-                }
+            String currentWord = getCurrentWordAtCaret();
+            if(!currentWord.isEmpty() && currentWord.length() <= 32) {
+                SwingUtilities.invokeLater(() -> showSuggestionsForWord(currentWord));
+            } else {
+                SwingUtilities.invokeLater(this::hideSuggestions);
             }
         } catch(Exception e) {
             hideSuggestions();
+        }
+    }
+
+    private String getCurrentWordAtCaret() {
+        try {
+            int caretPos = textPane.getCaretPosition();
+            String text = textPane.getText();
+            if(caretPos == 0 || caretPos > text.length()) return "";
+
+            int start = caretPos;
+            while(start > 0) {
+                char c = text.charAt(start - 1);
+                if(Character.isLetterOrDigit(c) || c == '_' ) {
+                    start--;
+                } else {
+                    break;
+                }
+            }
+            return text.substring(start, caretPos);
+        } catch(Exception ignored) {
+            return "";
         }
     }
 
@@ -264,18 +276,36 @@ public class GleamStorm extends JFrame {
         String lowerPrefix = prefix.toLowerCase();
 
         for(String keyword : GLEAM_KEYWORDS) {
-            if(keyword.startsWith(lowerPrefix) && !keyword.equals(lowerPrefix)) {
+            if(keyword.startsWith(lowerPrefix) && !keyword.equalsIgnoreCase(lowerPrefix)) {
                 matches.add(keyword);
             }
         }
-
         for(String func : GLEAM_FUNCTIONS) {
-            if(func.startsWith(lowerPrefix) && !func.equals(lowerPrefix)) {
+            if(func.startsWith(lowerPrefix) && !func.equalsIgnoreCase(lowerPrefix)) {
                 matches.add(func);
             }
         }
 
+        try {
+            LinkedHashSet<String> unique = getStrings(lowerPrefix);
+
+            java.util.HashSet<String> existing = new java.util.HashSet<>();
+            for(String m : matches) existing.add(m.toLowerCase());
+            for(String u : unique) {
+                if(existing.add(u.toLowerCase())) {
+                    matches.add(u);
+                }
+                if(matches.size() >= 50) break;
+            }
+        } catch(Exception ignored) {
+        }
+
         if(!matches.isEmpty()) {
+            matches.sort((a, b) -> {
+                int cmp = Integer.compare(a.length(), b.length());
+                if(cmp != 0) return cmp;
+                return a.compareToIgnoreCase(b);
+            });
             for(String match : matches) {
                 suggestionModel.addElement(match);
             }
@@ -283,6 +313,22 @@ public class GleamStorm extends JFrame {
         } else {
             hideSuggestions();
         }
+    }
+
+    private LinkedHashSet<String> getStrings(String lowerPrefix) {
+        String text = textPane.getText();
+        String[] words = text.split("[^A-Za-z0-9_]+");
+        LinkedHashSet<String> unique = new LinkedHashSet<>();
+        for(String w : words) {
+            if(w == null) continue;
+            String lw = w.toLowerCase();
+            if(lw.length() < 2) continue;
+            if(lw.equals(lowerPrefix)) continue;
+            if(lw.startsWith(lowerPrefix)) {
+                unique.add(w);
+            }
+        }
+        return unique;
     }
 
     private void showSuggestions() {
@@ -339,8 +385,13 @@ public class GleamStorm extends JFrame {
                 String text = textPane.getText();
 
                 int wordStart = caretPos;
-                while(wordStart > 0 && Character.isLetterOrDigit(text.charAt(wordStart - 1))) {
-                    wordStart--;
+                while(wordStart > 0) {
+                    char c = text.charAt(wordStart - 1);
+                    if(Character.isLetterOrDigit(c) || c == '_') {
+                        wordStart--;
+                    } else {
+                        break;
+                    }
                 }
 
                 String completion = selected.substring(caretPos - wordStart);
