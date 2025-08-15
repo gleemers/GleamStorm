@@ -48,6 +48,6 @@ tasks.build {
 
 tasks.jar {
     manifest {
-        attributes["Main-Class"] = "dev.thoq.GleamStorm"
+        attributes["Main-Class"] = "dev.thoq.Main"
     }
 }
