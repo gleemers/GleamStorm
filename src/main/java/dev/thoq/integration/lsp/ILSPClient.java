@@ -21,16 +21,18 @@ import java.util.function.Consumer;
 
 @SuppressWarnings("unused")
 public interface ILSPClient {
+    String formatDocument(String filePath);
+    String displayName();
+
     boolean connect();
-    void disconnect();
     boolean isConnected();
     boolean testConnection();
+    boolean checkSyntax(String filePath, String content);
+
+    void disconnect();
     void setDiagnosticsListener(IDiagnosticsListener listener);
     void setWorkspaceRoot(String path);
     void openDocument(String filePath, String content);
     void saveDocument(String filePath, String text);
-    String formatDocument(String filePath);
-    boolean checkSyntax(String filePath, String content);
     void requestHover(String filePath, int line, int ch, Consumer<String> callback);
-    String displayName();
 }

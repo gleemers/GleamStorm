@@ -18,13 +18,18 @@
 
 package dev.thoq.integration.gleam;
 
+import dev.thoq.integration.highlight.ISyntaxHighlighter;
+
 import javax.swing.*;
 import javax.swing.text.*;
 import java.awt.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.ISyntaxHighlighter {
+import static dev.thoq.ui.Theme.DARK_FG;
+import static dev.thoq.ui.Theme.LIGHT_FG;
+
+public class GleamSyntaxHighlighter implements ISyntaxHighlighter {
     private boolean isDarkTheme = true;
 
     private static final String[] KEYWORDS = {
@@ -33,8 +38,8 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
     };
 
     private static final String[] TYPES = {
-        "Int", "Float", "String", "Bool", "List", "Result", "Option",
-        "Nil", "True", "False"
+            "Int", "Float", "String", "Bool", "List", "Result", "Option",
+            "Nil", "True", "False"
     };
 
     private Pattern keywordPattern;
@@ -62,9 +67,9 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
     private void buildPatterns() {
         StringBuilder keywordBuilder = new StringBuilder("\\b(");
 
-        for (int i = 0; i < KEYWORDS.length; i++) {
+        for(int i = 0; i < KEYWORDS.length; i++) {
             keywordBuilder.append(KEYWORDS[i]);
-            if (i < KEYWORDS.length - 1) keywordBuilder.append("|");
+            if(i < KEYWORDS.length - 1) keywordBuilder.append("|");
         }
 
         keywordBuilder.append(")\\b");
@@ -72,12 +77,13 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
 
         StringBuilder typeBuilder = new StringBuilder("\\b(");
 
-        for (int i = 0; i < TYPES.length; i++) {
+        for(int i = 0; i < TYPES.length; i++) {
             typeBuilder.append(TYPES[i]);
 
-            if (i < TYPES.length - 1)
+            if(i < TYPES.length - 1)
                 typeBuilder.append("|");
         }
+
         typeBuilder.append(")\\b");
 
         typePattern = Pattern.compile(typeBuilder.toString());
@@ -105,7 +111,7 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
     }
 
     private void updateStyleColors() {
-        StyleConstants.setForeground(defaultStyle, isDarkTheme ? Color.WHITE : Color.BLACK);
+        StyleConstants.setForeground(defaultStyle, isDarkTheme ? DARK_FG : LIGHT_FG);
         StyleConstants.setForeground(keywordStyle, getKeywordColor());
         StyleConstants.setForeground(typeStyle, getTypeColor());
         StyleConstants.setForeground(stringStyle, getStringColor());
@@ -126,36 +132,36 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
 
         try {
             text = doc.getText(0, doc.getLength());
-        } catch (BadLocationException e) {
+        } catch(BadLocationException e) {
             return;
         }
 
-        if (text.length() > 10000) {
+        if(text.length() > 10000) {
             return;
         }
 
         doc.setCharacterAttributes(0, text.length(), defaultStyle, true);
 
-        highlightPattern(doc, text, stringPattern, stringStyle);
         highlightPattern(doc, text, keywordPattern, keywordStyle);
         highlightPattern(doc, text, typePattern, typeStyle);
         highlightPattern(doc, text, capitalizedIdentPattern, typeStyle);
         highlightPattern(doc, text, numberPattern, numberStyle);
         highlightPattern(doc, text, operatorPattern, operatorStyle);
         highlightFunctionCalls(doc, text);
+        highlightPattern(doc, text, stringPattern, stringStyle);
         highlightPattern(doc, text, commentPattern, commentStyle);
     }
 
     private void highlightPattern(StyledDocument doc, String text, Pattern pattern, Style style) {
         Matcher matcher = pattern.matcher(text);
 
-        while (matcher.find())
+        while(matcher.find())
             doc.setCharacterAttributes(matcher.start(), matcher.end() - matcher.start(), style, false);
     }
 
     private void highlightFunctionCalls(StyledDocument doc, String text) {
         Matcher m = functionCallPattern.matcher(text);
-        while (m.find()) {
+        while(m.find()) {
             int start = m.start(1);
             int end = m.end(1);
             int lookBack = Math.max(0, start - 5);
@@ -163,7 +169,7 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
             String name = text.substring(start, end);
             String prefix = text.substring(lookBack, start);
 
-            if (prefix.matches(".*\\bfn\\s+$") || isKeyword(name))
+            if(prefix.matches(".*\\bfn\\s+$") || isKeyword(name))
                 continue;
 
             doc.setCharacterAttributes(start, end - start, functionStyle, false);
@@ -171,14 +177,14 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
     }
 
     private boolean isKeyword(String s) {
-        for (String k : KEYWORDS)
-            if (k.equals(s)) return true;
+        for(String k : KEYWORDS)
+            if(k.equals(s)) return true;
 
         return false;
     }
 
     private Color getKeywordColor() {
-        return isDarkTheme ? new Color(112, 50, 204) : new Color(128, 0, 128);
+        return isDarkTheme ? new Color(225, 73, 212) : new Color(151, 25, 151);
     }
 
     private Color getTypeColor() {
@@ -186,7 +192,7 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
     }
 
     private Color getStringColor() {
-        return isDarkTheme ? new Color(89, 127, 135) : new Color(163, 21, 21);
+        return isDarkTheme ? new Color(76, 195, 79) : new Color(52, 149, 101);
     }
 
     private Color getCommentColor() {
@@ -202,6 +208,6 @@ public class GleamSyntaxHighlighter implements dev.thoq.integration.highlight.IS
     }
 
     private Color getFunctionColor() {
-        return isDarkTheme ? new Color(97, 175, 239) : new Color(0, 102, 204);
+        return isDarkTheme ? new Color(154, 97, 239) : new Color(0, 102, 204);
     }
 }

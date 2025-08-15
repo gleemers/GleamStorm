@@ -23,10 +23,8 @@ import dev.thoq.integration.gleam.GleamLSPClient;
 import dev.thoq.integration.gleam.GleamSyntaxHighlighter;
 import dev.thoq.integration.highlight.ISyntaxHighlighter;
 import dev.thoq.integration.lsp.RDiagnostic;
-import dev.thoq.ui.CustomScrollBarUI;
-import dev.thoq.ui.CustomTitleBar;
-import dev.thoq.ui.SquigglePainter;
-import dev.thoq.ui.ThemedTreeCellRenderer;
+import dev.thoq.log.Logger;
+import dev.thoq.ui.*;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
@@ -41,7 +39,12 @@ import javax.swing.text.Highlighter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
+import javax.swing.undo.CannotRedoException;
+import javax.swing.undo.CannotUndoException;
+import javax.swing.undo.UndoManager;
 import java.awt.*;
+import java.awt.datatransfer.Clipboard;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
@@ -53,7 +56,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-@SuppressWarnings({"CallToPrintStackTrace", "deprecation", "MagicConstant"})
+import static dev.thoq.ui.Theme.*;
+
+@SuppressWarnings({"CallToPrintStackTrace", "deprecation", "MagicConstant", "unused"})
 public class GleamStorm extends JFrame {
     private JTextPane textPane;
     private JLabel statusLabel;
@@ -67,6 +72,7 @@ public class GleamStorm extends JFrame {
     private CustomTitleBar titleBar;
     private JSplitPane splitPane;
     private JTree fileTree;
+    private UndoManager undoManager;
     private DefaultTreeModel treeModel;
     private Timer highlightTimer;
     private Timer suggestionTimer;
@@ -80,20 +86,7 @@ public class GleamStorm extends JFrame {
     private Point lastMousePoint;
     private int lastHoverOffset = -1;
     private String hoverText = null;
-    private static final Color DARK_BG = new Color(18, 18, 18);
-    private static final Color DARK_FG = new Color(230, 230, 230);
-    private static final Color DARK_MENU_BG = new Color(24, 24, 24);
-    private static final Color DARK_BORDER = new Color(30, 30, 30);
-    private static final Color DARK_SELECTION = new Color(64, 64, 64);
-    private static final Color DARK_SCROLL = new Color(72, 72, 72);
-    private static final Color DARK_ACCENT = new Color(160, 160, 160);
-    private static final Color LIGHT_BG = new Color(250, 250, 250);
-    private static final Color LIGHT_FG = new Color(32, 32, 32);
-    private static final Color LIGHT_MENU_BG = new Color(242, 242, 242);
-    private static final Color LIGHT_BORDER = new Color(235, 235, 235);
-    private static final Color LIGHT_SELECTION = new Color(220, 220, 220);
-    private static final Color LIGHT_SCROLL = new Color(200, 200, 200);
-    private static final Color LIGHT_ACCENT = new Color(128, 128, 128);
+
     private static final String[] GLEAM_KEYWORDS = {
             "as", "assert", "case", "const", "external", "fn", "if", "import",
             "let", "opaque", "pub", "todo", "try", "type", "use"
@@ -107,6 +100,7 @@ public class GleamStorm extends JFrame {
     public GleamStorm() {
         setUndecorated(true);
         setBackground(new Color(0, 0, 0, 0));
+        setResizable(true);
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -126,40 +120,29 @@ public class GleamStorm extends JFrame {
 
     private void loadIcon() {
         try {
-            BufferedImage img = null;
+            BufferedImage img;
             InputStream iconStream = getClass().getResourceAsStream("/icon.png");
-            if(iconStream != null) {
-                img = ImageIO.read(iconStream);
-                iconStream.close();
-                System.out.println("Icon loaded successfully from /icon.png");
-            } else {
-                iconStream = getClass().getResourceAsStream("/resources/icon.png");
-                if(iconStream != null) {
-                    img = ImageIO.read(iconStream);
-                    iconStream.close();
-                    System.out.println("Icon loaded from /resources/icon.png");
-                }
-            }
 
-            if(img != null) {
-                setIconImage(img);
+            assert iconStream != null;
+            img = ImageIO.read(iconStream);
+            iconStream.close();
 
-                try {
-                    Taskbar taskbar = Taskbar.getTaskbar();
-                    taskbar.setIconImage(img);
-                } catch(UnsupportedOperationException | SecurityException ignored) {
+            assert img != null;
+            setIconImage(img);
 
-                }
-            } else {
-                System.out.println("Warning: Icon not found. Place icon.png in src/main/resources/");
+            try {
+                Taskbar taskbar = Taskbar.getTaskbar();
+                taskbar.setIconImage(img);
+            } catch(UnsupportedOperationException | SecurityException ignored) {
+
             }
         } catch(Exception e) {
-            System.out.println("Warning: Could not load icon: " + e.getMessage());
+            Logger.warn("Warning: Could not load icon: " + e.getMessage());
         }
     }
 
     private void initializeComponents() {
-        setTitle("GleamStorm - Gleam Code Editor");
+        setTitle("GleamStorm");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setSize(1200, 800);
         setLocationRelativeTo(null);
@@ -412,9 +395,10 @@ public class GleamStorm extends JFrame {
                 if(cmp != 0) return cmp;
                 return a.compareToIgnoreCase(b);
             });
-            for(String match : matches) {
+
+            for(String match : matches)
                 suggestionModel.addElement(match);
-            }
+
             showSuggestions();
         } else {
             hideSuggestions();
@@ -524,7 +508,6 @@ public class GleamStorm extends JFrame {
         scrollPane = new JScrollPane(textPane);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
-        scrollPane.setBorder(createCustomBorder());
 
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("No folder");
         treeModel = new DefaultTreeModel(root);
@@ -539,21 +522,24 @@ public class GleamStorm extends JFrame {
         fileTree.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                if(e.getClickCount() == 2) {
-                    TreePath path = fileTree.getPathForLocation(e.getX(), e.getY());
-                    if(path != null) {
-                        Object last = ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject();
-                        if(last instanceof File file) {
-                            if(file.isFile()) {
-                                openSpecificFile(file);
-                            }
-                        }
-                    }
+                if(e.getClickCount() != 2) return;
+
+                TreePath path = fileTree.getPathForLocation(e.getX(), e.getY());
+
+                assert path != null;
+
+                Object last = ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject();
+
+                if(last instanceof File file) {
+                    if(!file.isFile())
+                        return;
+
+                    openSpecificFile(file);
                 }
             }
         });
+
         JScrollPane treeScroll = new JScrollPane(fileTree);
-        treeScroll.setBorder(createCustomBorder());
 
         splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, scrollPane);
         splitPane.setDividerLocation(260);
@@ -575,14 +561,6 @@ public class GleamStorm extends JFrame {
         add(mainPanel);
     }
 
-    private Border createCustomBorder() {
-        Color borderColor = isDarkTheme ? DARK_BORDER : LIGHT_BORDER;
-
-        Border rounded = new LineBorder(borderColor, 1, true);
-        Border padding = new EmptyBorder(2, 2, 2, 2);
-        return new CompoundBorder(rounded, padding);
-    }
-
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
         menuBar.setBorder(createCustomMenuBorder());
@@ -595,9 +573,8 @@ public class GleamStorm extends JFrame {
         newMenu.add(newFileItem);
         newMenu.add(newFolderItem);
 
-        JMenu fileMenu = getJMenu();
-
-        JMenu editMenu = getMenu();
+        JMenu fileMenu = getFileMenu();
+        JMenu editMenu = getEditMenu();
 
         JMenu toolsMenu = new JMenu("Tools");
         JMenuItem formatItem = new JMenuItem("Format Document");
@@ -617,29 +594,36 @@ public class GleamStorm extends JFrame {
         return menuBar;
     }
 
-    private JMenu getMenu() {
+    private JMenu getEditMenu() {
         JMenu editMenu = new JMenu("Edit");
         JMenuItem undoItem = new JMenuItem("Undo");
         JMenuItem redoItem = new JMenuItem("Redo");
+        JMenuItem clearEditsItem = new JMenuItem("Clear edit history");
         JMenuItem cutItem = new JMenuItem("Cut");
         JMenuItem copyItem = new JMenuItem("Copy");
         JMenuItem pasteItem = new JMenuItem("Paste");
 
-        cutItem.addActionListener(_ -> textPane.cut());
-        copyItem.addActionListener(_ -> textPane.copy());
-        pasteItem.addActionListener(_ -> textPane.paste());
+        cutItem.addActionListener(_ -> cut());
+        copyItem.addActionListener(_ -> copy());
+        pasteItem.addActionListener(_ -> paste());
+        undoItem.addActionListener(_ -> undo());
+        redoItem.addActionListener(_ -> redo());
+        clearEditsItem.addActionListener(_ -> clearUndoHistory());
 
         editMenu.add(undoItem);
         editMenu.add(redoItem);
+        editMenu.add(clearEditsItem);
         editMenu.addSeparator();
         editMenu.add(cutItem);
         editMenu.add(copyItem);
         editMenu.add(pasteItem);
+
         return editMenu;
     }
 
-    private JMenu getJMenu() {
+    private JMenu getFileMenu() {
         JMenu fileMenu = new JMenu("File");
+
         JMenuItem newItem = new JMenuItem("New");
         JMenuItem openItem = new JMenuItem("Open");
         JMenuItem openFolderItem = new JMenuItem("Open Folder...");
@@ -662,6 +646,7 @@ public class GleamStorm extends JFrame {
         fileMenu.add(saveAsItem);
         fileMenu.addSeparator();
         fileMenu.add(exitItem);
+
         return fileMenu;
     }
 
@@ -686,14 +671,12 @@ public class GleamStorm extends JFrame {
         JButton openFolderBtn = createStyledButton("Open Folder");
         JButton saveBtn = createStyledButton("Save");
         JButton themeBtn = createStyledButton("Theme");
-        JButton testLSPBtn = createStyledButton("Test LSP");
 
         newBtn.addActionListener(_ -> newFile());
         openBtn.addActionListener(_ -> openFile());
         openFolderBtn.addActionListener(_ -> openFolder());
         saveBtn.addActionListener(_ -> saveFile());
         themeBtn.addActionListener(_ -> toggleTheme());
-        testLSPBtn.addActionListener(_ -> testLSPConnection());
 
         toolBar.add(newBtn);
         toolBar.add(Box.createHorizontalStrut(5));
@@ -704,49 +687,8 @@ public class GleamStorm extends JFrame {
         toolBar.add(saveBtn);
         toolBar.add(Box.createHorizontalStrut(15));
         toolBar.add(themeBtn);
-        toolBar.add(Box.createHorizontalStrut(5));
-        toolBar.add(testLSPBtn);
 
         return toolBar;
-    }
-
-    private void testLSPConnection() {
-        new Thread(() -> {
-            SwingUtilities.invokeLater(() -> statusLabel.setText(" Testing LSP connection..."));
-
-            System.out.println("\n" + "=".repeat(50));
-            System.out.println("GLEAM LSP CONNECTION TEST");
-            System.out.println("=".repeat(50));
-
-            boolean result = lspClient.testConnection();
-
-            SwingUtilities.invokeLater(() -> {
-                if(result) {
-                    statusLabel.setText(" LSP Connection: SUCCESS - Syntax checking available");
-                    JOptionPane.showMessageDialog(this,
-                            """
-                                    LSP connection successful.
-                                    - Syntax checking is now available
-                                    - Document formatting is enabled
-                                    - Check console for technical details""",
-                            "LSP Test - Success", JOptionPane.INFORMATION_MESSAGE);
-                } else {
-                    statusLabel.setText(" LSP Connection: FAILED - Running in offline mode");
-                    JOptionPane.showMessageDialog(this,
-                            """
-                                    LSP connection failed.
-                                    The editor will work but without LSP features.
-                                    
-                                    To enable LSP features:
-                                    - Install Gleam: brew install gleam
-                                    - Verify: gleam --version
-                                    - Run from a directory with gleam.toml
-                                    
-                                    Check console for detailed error information.""",
-                            "LSP Test - Failed", JOptionPane.WARNING_MESSAGE);
-                }
-            });
-        }).start();
     }
 
     private JButton createStyledButton(String text) {
@@ -778,7 +720,6 @@ public class GleamStorm extends JFrame {
         textPane.setForeground(fgColor);
         textPane.setCaretColor(fgColor);
         textPane.setSelectionColor(selectionColor);
-
         statusLabel.setBackground(menuBgColor);
         statusLabel.setForeground(fgColor);
         statusLabel.setOpaque(true);
@@ -789,87 +730,81 @@ public class GleamStorm extends JFrame {
 
         scrollPane.setBackground(bgColor);
         scrollPane.getViewport().setBackground(bgColor);
-        scrollPane.setBorder(createCustomBorder());
-
         suggestionList.setBackground(menuBgColor);
         suggestionList.setForeground(fgColor);
         suggestionList.setSelectionBackground(selectionColor);
         suggestionPopup.setBackground(menuBgColor);
         suggestionPopup.setBorder(new LineBorder(borderColor, 1, true));
-
         scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI(scrollColor, bgColor));
         scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI(scrollColor, bgColor));
 
         JMenuBar menuBar = getJMenuBar();
-        if(menuBar != null) {
+        assert menuBar != null;
 
-            UIManager.put("MenuBar.background", menuBgColor);
-            UIManager.put("Menu.background", menuBgColor);
-            UIManager.put("MenuItem.background", menuBgColor);
-            UIManager.put("PopupMenu.background", menuBgColor);
-            UIManager.put("MenuItem.selectionBackground", selectionColor);
-            UIManager.put("MenuItem.foreground", fgColor);
-            UIManager.put("Menu.foreground", fgColor);
-            UIManager.put("PopupMenu.foreground", fgColor);
+        UIManager.put("MenuBar.background", menuBgColor);
+        UIManager.put("Menu.background", menuBgColor);
+        UIManager.put("MenuItem.background", menuBgColor);
+        UIManager.put("PopupMenu.background", menuBgColor);
+        UIManager.put("MenuItem.selectionBackground", selectionColor);
+        UIManager.put("MenuItem.foreground", fgColor);
+        UIManager.put("Menu.foreground", fgColor);
+        UIManager.put("PopupMenu.foreground", fgColor);
+        UIManager.put("ToolTip.background", menuBgColor);
+        UIManager.put("ToolTip.foreground", fgColor);
+        UIManager.put("ToolTip.border", new LineBorder(borderColor, 1, true));
+        UIManager.put("TextField.background", menuBgColor);
+        UIManager.put("TextField.foreground", fgColor);
+        UIManager.put("TextField.caretForeground", fgColor);
+        UIManager.put("TextField.border", new LineBorder(borderColor, 1, true));
+        UIManager.put("PasswordField.background", menuBgColor);
+        UIManager.put("PasswordField.foreground", fgColor);
+        UIManager.put("PasswordField.caretForeground", fgColor);
+        UIManager.put("PasswordField.border", new LineBorder(borderColor, 1, true));
+        UIManager.put("TextArea.background", menuBgColor);
+        UIManager.put("TextArea.foreground", fgColor);
+        UIManager.put("TextArea.caretForeground", fgColor);
+        UIManager.put("TextArea.border", new LineBorder(borderColor, 1, true));
+        UIManager.put("ComboBox.background", menuBgColor);
+        UIManager.put("ComboBox.foreground", fgColor);
+        UIManager.put("ComboBox.border", new LineBorder(borderColor, 1, true));
 
-            UIManager.put("ToolTip.background", menuBgColor);
-            UIManager.put("ToolTip.foreground", fgColor);
-            UIManager.put("ToolTip.border", new LineBorder(borderColor, 1, true));
+        menuBar.setBackground(menuBgColor);
+        menuBar.setOpaque(true);
+        menuBar.setBorder(createCustomMenuBorder());
 
-            UIManager.put("TextField.background", menuBgColor);
-            UIManager.put("TextField.foreground", fgColor);
-            UIManager.put("TextField.caretForeground", fgColor);
-            UIManager.put("TextField.border", new LineBorder(borderColor, 1, true));
+        for(int i = 0; i < menuBar.getMenuCount(); i++) {
+            JMenu menu = menuBar.getMenu(i);
 
-            UIManager.put("PasswordField.background", menuBgColor);
-            UIManager.put("PasswordField.foreground", fgColor);
-            UIManager.put("PasswordField.caretForeground", fgColor);
-            UIManager.put("PasswordField.border", new LineBorder(borderColor, 1, true));
+            if(menu == null) continue;
 
-            UIManager.put("TextArea.background", menuBgColor);
-            UIManager.put("TextArea.foreground", fgColor);
-            UIManager.put("TextArea.caretForeground", fgColor);
-            UIManager.put("TextArea.border", new LineBorder(borderColor, 1, true));
+            menu.setBackground(menuBgColor);
+            menu.setForeground(fgColor);
+            menu.setOpaque(true);
+            JPopupMenu popup = menu.getPopupMenu();
 
-            UIManager.put("ComboBox.background", menuBgColor);
-            UIManager.put("ComboBox.foreground", fgColor);
-            UIManager.put("ComboBox.border", new LineBorder(borderColor, 1, true));
-
-            menuBar.setBackground(menuBgColor);
-            menuBar.setOpaque(true);
-            menuBar.setBorder(createCustomMenuBorder());
-            for(int i = 0; i < menuBar.getMenuCount(); i++) {
-                JMenu menu = menuBar.getMenu(i);
-                if(menu == null) continue;
-                menu.setBackground(menuBgColor);
-                menu.setForeground(fgColor);
-                menu.setOpaque(true);
-                JPopupMenu popup = menu.getPopupMenu();
-                if(popup != null) {
-                    popup.setOpaque(true);
-                    popup.setBackground(menuBgColor);
-                    popup.setBorder(new LineBorder(borderColor, 1, true));
-                }
-                styleMenuItems(menu, menuBgColor, fgColor);
+            if(popup != null) {
+                popup.setOpaque(true);
+                popup.setBackground(menuBgColor);
+                popup.setBorder(new LineBorder(borderColor, 1, true));
             }
-            SwingUtilities.updateComponentTreeUI(menuBar);
+
+            styleMenuItems(menu, menuBgColor, fgColor);
         }
 
-        if(titleBar != null) {
-            Color accent = isDarkTheme ? DARK_ACCENT : LIGHT_ACCENT;
-            titleBar.applyTheme(menuBgColor, fgColor, accent);
-        }
+        SwingUtilities.updateComponentTreeUI(menuBar);
 
-        if(fileTree != null) {
-            fileTree.setCellRenderer(new ThemedTreeCellRenderer(bgColor, fgColor, selectionColor));
-            fileTree.setBackground(bgColor);
-            fileTree.setForeground(fgColor);
-            fileTree.setBorder(new EmptyBorder(4, 8, 4, 4));
-        }
-        if(splitPane != null) {
-            splitPane.setBackground(menuBgColor);
-            splitPane.setDividerSize(6);
-        }
+        assert titleBar != null;
+        Color accent = isDarkTheme ? DARK_ACCENT : LIGHT_ACCENT;
+        titleBar.applyTheme(menuBgColor, fgColor);
+
+        assert fileTree != null;
+        fileTree.setCellRenderer(new ThemedTreeCellRenderer(bgColor, fgColor, selectionColor));
+        fileTree.setBackground(bgColor);
+        fileTree.setForeground(fgColor);
+
+        assert splitPane != null;
+        splitPane.setBackground(menuBgColor);
+        splitPane.setDividerSize(6);
 
         Component[] components = mainPanel.getComponents();
         for(Component comp : components) {
@@ -944,6 +879,7 @@ public class GleamStorm extends JFrame {
             JOptionPane.showMessageDialog(this, "Invalid folder selected.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
+
         currentFolder = folder;
         setTitle("GleamStorm - " + currentFolder.getName());
         statusLabel.setText(" Opened folder: " + currentFolder.getAbsolutePath());
@@ -1029,13 +965,67 @@ public class GleamStorm extends JFrame {
     }
 
     private void saveAsFile() {
-        dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.SAVE_FILE, new String[]{"gleam"});
-        java.io.File sel = picker.pick();
-        if(sel != null) {
-            currentFile = sel.getName().endsWith(".gleam") ? sel : new File(sel.getAbsolutePath() + ".gleam");
-            saveFile();
-            setTitle("GleamStorm - " + currentFile.getName());
+        SimplePathPicker picker = new SimplePathPicker(this, SimplePathPicker.Mode.SAVE_FILE, new String[]{"gleam"});
+        File sel = picker.pick();
+        if(sel == null) return;
+
+        currentFile = sel.getName().endsWith(".gleam") ? sel : new File(sel.getAbsolutePath() + ".gleam");
+        saveFile();
+        setTitle("GleamStorm - " + currentFile.getName());
+    }
+
+    private void undo() {
+        try {
+            if(!undoManager.canUndo()) return;
+            undoManager.undo();
+        } catch(CannotUndoException ex) {
+            Logger.error("Unable to undo", ex);
+            statusLabel.setText(" Unable to undo");
         }
+    }
+
+    private void redo() {
+        try {
+            if(!undoManager.canRedo()) return;
+
+            undoManager.redo();
+        } catch(CannotRedoException ex) {
+            Logger.error("Unable to redo: " + ex.getMessage());
+            statusLabel.setText("Unable to redo: " + ex.getMessage());
+        }
+    }
+
+    public void clearUndoHistory() {
+        undoManager.discardAllEdits();
+    }
+
+    private void cut() {
+        String selection = textPane.getSelectedText();
+
+        if(selection == null) return;
+
+        textPane.copy();
+        textPane.cut();
+    }
+
+    private void copy() {
+        String selection = textPane.getSelectedText();
+        if(selection == null) return;
+
+        StringSelection stringSelection = new StringSelection(selection);
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(stringSelection, null);
+    }
+
+    private void paste() {
+        StringSelection stringSelection = (StringSelection) Toolkit
+                .getDefaultToolkit()
+                .getSystemClipboard()
+                .getContents(null);
+
+        if(stringSelection == null) return;
+
+        textPane.replaceSelection(stringSelection.toString());
     }
 
     private void formatDocument() {
@@ -1061,11 +1051,10 @@ public class GleamStorm extends JFrame {
         }
     }
 
-
     private void refreshFileTree() {
         if(currentFolder != null && fileTree != null) {
             DefaultMutableTreeNode root = new DefaultMutableTreeNode(currentFolder.getName());
-            dev.thoq.core.FileTreeBuilder.buildFileTreeNode(currentFolder, root);
+            FileTreeBuilder.buildFileTreeNode(currentFolder, root);
             treeModel.setRoot(root);
             fileTree.setRootVisible(true);
 
@@ -1234,5 +1223,4 @@ public class GleamStorm extends JFrame {
             textPane.setToolTipText(hoverText);
         }));
     }
-
 }

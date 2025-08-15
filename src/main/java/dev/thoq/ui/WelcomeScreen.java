@@ -33,6 +33,7 @@ import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 
 @SuppressWarnings("SameParameterValue")
 public class WelcomeScreen extends JFrame {
@@ -120,39 +121,18 @@ public class WelcomeScreen extends JFrame {
     private JLabel buildLogoLabel() {
         Image image = null;
 
-        try(InputStream is = getClass().getResourceAsStream("/gleamstorm_logo_text.png")) {
-            if(is != null) {
-                image = ImageIO.read(is);
-            }
+        try(InputStream is = getClass().getResourceAsStream("/icon.png")) {
+            assert is != null;
+
+            image = ImageIO.read(is);
         } catch(IOException ignored) {
         }
 
-        if(image == null) {
-            File f = new File("brand/gleamstorm_logo_text.png");
-
-            if(f.exists()) {
-                try {
-                    image = ImageIO.read(f);
-                } catch(IOException ignored) {
-                }
-            }
-        }
-
-        if(image == null) {
-            try(InputStream is = getClass().getResourceAsStream("/icon.png")) {
-                if(is != null) image = ImageIO.read(is);
-            } catch(IOException ignored) {
-            }
-        }
+        assert image != null;
 
         JLabel label;
-        if(image != null) {
-            Image scaled = image.getScaledInstance(320, -1, Image.SCALE_SMOOTH);
-            label = new JLabel(new ImageIcon(scaled));
-        } else {
-            label = new JLabel("GleamStorm", SwingConstants.LEFT);
-            label.setFont(new Font("SansSerif", Font.BOLD, 28));
-        }
+        Image scaled = image.getScaledInstance(320, -1, Image.SCALE_SMOOTH);
+        label = new JLabel(new ImageIcon(scaled));
 
         label.setBorder(new EmptyBorder(10, 10, 20, 10));
 
@@ -223,7 +203,7 @@ public class WelcomeScreen extends JFrame {
         Color accent = Theme.accent();
 
         mainPanel.setBackground(bg);
-        titleBar.applyTheme(menu, fg, accent);
+        titleBar.applyTheme(menu, fg);
 
         styleTree(getContentPane(), bg, fg, menu, accent);
 
@@ -319,30 +299,34 @@ public class WelcomeScreen extends JFrame {
         JLabel title = new JLabel("Create New Gleam Project");
         title.setFont(new Font("SansSerif", Font.BOLD, 20));
         gbc.gridwidth = 3;
+
         panel.add(title, gbc);
         gbc.gridwidth = 1;
-
         gbc.gridy++;
+
         panel.add(new JLabel("Project name:"), gbc);
         JTextField nameField = new JTextField();
         gbc.gridx = 1;
         gbc.weightx = 1;
+
         panel.add(nameField, gbc);
         gbc.gridx = 2;
         gbc.weightx = 0;
-        panel.add(Box.createHorizontalStrut(1), gbc);
 
+        panel.add(Box.createHorizontalStrut(1), gbc);
         gbc.gridx = 0;
         gbc.gridy++;
+
         panel.add(new JLabel("Location (parent):"), gbc);
         JTextField dirField = new JTextField();
+
         gbc.gridx = 1;
         gbc.weightx = 1;
         panel.add(dirField, gbc);
         JButton browse = new JButton("Browse...");
 
         browse.addActionListener(_ -> {
-            dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
+            SimplePathPicker picker = new SimplePathPicker(this, SimplePathPicker.Mode.DIRECTORY, null);
             java.io.File sel = picker.pick();
 
             if(sel != null)
@@ -356,10 +340,6 @@ public class WelcomeScreen extends JFrame {
         gbc.gridx = 0;
         gbc.gridy++;
         gbc.gridwidth = 3;
-        JCheckBox initCheck = new JCheckBox("Use gleam init (create folder if needed)");
-        initCheck.setOpaque(false);
-        panel.add(initCheck, gbc);
-        gbc.gridwidth = 1;
 
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         JButton cancel = new JButton("Cancel");
@@ -389,37 +369,22 @@ public class WelcomeScreen extends JFrame {
             }
 
             File projectDir = new File(parentDir, name);
-            if(initCheck.isSelected()) {
-                if(!projectDir.exists()) {
-                    if(!projectDir.mkdirs()) {
-                        JOptionPane.showMessageDialog(this, "Failed to create project directory.", "Error", JOptionPane.ERROR_MESSAGE);
-                        return;
-                    }
-                }
-
-                runCommandAsync(new String[]{"gleam", "init", "--yes"}, projectDir, "Initializing Gleam project...", success -> {
-                    if(success) openInEditor(projectDir);
-                    else
-                        JOptionPane.showMessageDialog(this, errorMessageFor("gleam"), "Gleam Error", JOptionPane.ERROR_MESSAGE);
-                });
-            } else {
-                if(projectDir.exists()) {
-                    JOptionPane.showMessageDialog(this, "Destination already exists.", "Error", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-                runCommandAsync(new String[]{"gleam", "new", name}, parentDir, "Creating Gleam project...", success -> {
-                    if(success) openInEditor(projectDir);
-                    else
-                        JOptionPane.showMessageDialog(this, errorMessageFor("gleam"), "Gleam Error", JOptionPane.ERROR_MESSAGE);
-                });
+            if(projectDir.exists()) {
+                JOptionPane.showMessageDialog(this, "Destination already exists.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
             }
+
+            runCommandAsync(new String[]{"gleam", "new", name}, parentDir, "Creating Gleam project...", success -> {
+                if(success) openInEditor(projectDir);
+                else
+                    JOptionPane.showMessageDialog(this, errorMessageFor("gleam"), "Gleam Error", JOptionPane.ERROR_MESSAGE);
+            });
         });
 
         return panel;
-        }
+    }
 
-        private JPanel buildClonePanel() {
+    private JPanel buildClonePanel() {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setBorder(new EmptyBorder(24, 24, 24, 24));
         GridBagConstraints gbc = new GridBagConstraints();
@@ -455,7 +420,7 @@ public class WelcomeScreen extends JFrame {
         panel.add(parentField, gbc);
         JButton browse = new JButton("Browse...");
         browse.addActionListener(_ -> {
-            dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
+            SimplePathPicker picker = new SimplePathPicker(this, SimplePathPicker.Mode.DIRECTORY, null);
             java.io.File sel = picker.pick();
             if(sel != null) parentField.setText(sel.getAbsolutePath());
         });
@@ -523,22 +488,24 @@ public class WelcomeScreen extends JFrame {
 
             runCommandAsync(cmd.toArray(new String[0]), parentDir, "Cloning repository...", success -> {
                 if(success && clonedDir.isDirectory()) openInEditor(clonedDir);
-                else JOptionPane.showMessageDialog(this, errorMessageFor("git"), "Git Error", JOptionPane.ERROR_MESSAGE);
+                else
+                    JOptionPane.showMessageDialog(this, errorMessageFor("git"), "Git Error", JOptionPane.ERROR_MESSAGE);
             });
         });
 
         return panel;
-        }
-
-        private void onOpenProject() {
-        dev.thoq.ui.SimplePathPicker picker = new dev.thoq.ui.SimplePathPicker(this, dev.thoq.ui.SimplePathPicker.Mode.DIRECTORY, null);
-        java.io.File sel = picker.pick();
-
-        if(sel != null)
-            openInEditor(sel);
     }
 
-    private void runCommandAsync(String[] cmd, File workDir, String status, java.util.function.Consumer<Boolean> done) {
+    private void onOpenProject() {
+        SimplePathPicker picker = new SimplePathPicker(this, SimplePathPicker.Mode.DIRECTORY, null);
+        File sel = picker.pick();
+
+        if(sel == null) return;
+
+        openInEditor(sel);
+    }
+
+    private void runCommandAsync(String[] cmd, File workDir, String status, Consumer<Boolean> done) {
         Logger.info("Starting command: " + String.join(" ", cmd) + " in " + workDir.getAbsolutePath());
         JDialog progress = buildProgressDialog(status);
 
@@ -559,19 +526,19 @@ public class WelcomeScreen extends JFrame {
         pb.redirectErrorStream(true);
 
         try {
-            Process p = pb.start();
+            Process process = pb.start();
 
             new Thread(() -> {
                 try {
-                    p.getOutputStream().write('\n');
-                    p.getOutputStream().flush();
-                    p.getOutputStream().close();
+                    process.getOutputStream().write('\n');
+                    process.getOutputStream().flush();
+                    process.getOutputStream().close();
                 } catch(IOException ignored) {
                 }
             }, "cmd-stdin").start();
 
             Thread outReader = new Thread(() -> {
-                try(BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream()))) {
+                try(BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
                     String line;
                     while((line = br.readLine()) != null) {
                         Logger.debug(line);
@@ -582,14 +549,14 @@ public class WelcomeScreen extends JFrame {
             }, "cmd-stdout");
             outReader.start();
 
-            boolean finished = p.waitFor(5, TimeUnit.MINUTES);
+            boolean finished = process.waitFor(5, TimeUnit.MINUTES);
             if(!finished) {
                 Logger.error("Command timed out: " + String.join(" ", cmd));
-                p.destroyForcibly();
+                process.destroyForcibly();
                 return false;
             }
 
-            int code = p.exitValue();
+            int code = process.exitValue();
             return code == 0;
         } catch(IOException | InterruptedException e) {
             Logger.error("Command failed: " + String.join(" ", cmd), e);
@@ -613,26 +580,35 @@ public class WelcomeScreen extends JFrame {
     }
 
     private JDialog buildProgressDialog(String text) {
-        JDialog d = new JDialog(this, true);
-        d.setUndecorated(true);
-        JPanel p = new JPanel(new BorderLayout());
-        p.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(16, 20, 16, 20)));
-        p.setBackground(Theme.menuBg());
-        JLabel l = new JLabel(text);
-        l.setForeground(Theme.fg());
-        p.add(l, BorderLayout.CENTER);
-        d.getContentPane().add(p);
-        d.pack();
-        d.setLocationRelativeTo(this);
+        JDialog dialog = new JDialog(this, true);
+        JPanel panel = new JPanel(new BorderLayout());
+        JLabel label = new JLabel(text);
 
-        return d;
+        dialog.setUndecorated(true);
+        panel.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(16, 20, 16, 20)));
+        panel.setBackground(Theme.menuBg());
+        label.setForeground(Theme.fg());
+        panel.add(label, BorderLayout.CENTER);
+        dialog.getContentPane().add(panel);
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+
+        return dialog;
     }
 
     private void openInEditor(File folder) {
         Logger.info("Opening project in editor: " + folder.getAbsolutePath());
         GleamStorm app = new GleamStorm();
-        app.setVisible(true);
-        app.openProject(folder);
-        dispose();
+        JDialog progress = buildProgressDialog("Opening project...");
+
+        this.setVisible(false);
+
+        new Thread(() -> {
+            app.setVisible(true);
+            app.openProject(folder);
+            dispose();
+        }).start();
+
+        progress.setVisible(true);
     }
 }

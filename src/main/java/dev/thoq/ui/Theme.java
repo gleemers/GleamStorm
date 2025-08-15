@@ -24,7 +24,21 @@ import java.awt.Color;
 public final class Theme {
     public enum Mode { DARK, LIGHT }
 
-    private static Mode mode = Mode.DARK;
+    public static final Color DARK_BG = new Color(18, 18, 18);
+    public static final Color DARK_FG = new Color(223, 223, 223);
+    public static final Color DARK_MENU_BG = new Color(24, 24, 24);
+    public static final Color DARK_BORDER = new Color(30, 30, 30);
+    public static final Color DARK_SELECTION = new Color(64, 64, 64);
+    public static final Color DARK_SCROLL = new Color(72, 72, 72);
+    public static final Color DARK_ACCENT = new Color(160, 160, 160);
+    public static final Color LIGHT_BG = new Color(250, 250, 250);
+    public static final Color LIGHT_FG = new Color(32, 32, 32);
+    public static final Color LIGHT_MENU_BG = new Color(242, 242, 242);
+    public static final Color LIGHT_BORDER = new Color(235, 235, 235);
+    public static final Color LIGHT_SELECTION = new Color(220, 220, 220);
+    public static final Color LIGHT_SCROLL = new Color(200, 200, 200);
+    public static final Color LIGHT_ACCENT = new Color(128, 128, 128);
+    public static Mode mode = Mode.DARK;
 
     private Theme() {}
 
@@ -57,11 +71,11 @@ public final class Theme {
     }
 
     public static Color border() {
-        return isDark() ? new Color(30, 30, 30) : new Color(235, 235, 235);
+        return isDark() ? new Color(30, 30, 30) : new Color(202, 202, 202);
     }
 
     public static Color accent() { // subtle accents (lines, outlines, selection)
-        return isDark() ? new Color(160, 160, 160) : new Color(128, 128, 128);
+        return isDark() ? new Color(89, 89, 89) : new Color(150, 150, 150);
     }
 
     public static Color selection() {

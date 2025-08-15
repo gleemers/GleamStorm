@@ -23,12 +23,16 @@ import dev.thoq.integration.lsp.RDiagnostic;
 import dev.thoq.log.Logger;
 
 import java.io.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @SuppressWarnings("SameParameterValue")
 public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
-    private final java.util.concurrent.ConcurrentHashMap<Integer, java.util.function.Consumer<String>> hoverCallbacks = new java.util.concurrent.ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Integer, Consumer<String>> hoverCallbacks = new ConcurrentHashMap<>();
 
     private Process lspProcess;
     private BufferedWriter writer;
@@ -236,21 +240,30 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
     }
 
     private RDiagnostic parseDiagnostic(String obj) {
-        java.util.regex.Pattern pStart = java.util.regex.Pattern.compile("\"start\"\\s*:\\s*\\{[^}]*?\"line\"\\s*:\\s*(\\d+)[^}]*?\"character\"\\s*:\\s*(\\d+)", java.util.regex.Pattern.DOTALL);
-        java.util.regex.Pattern pEnd = java.util.regex.Pattern.compile("\"end\"\\s*:\\s*\\{[^}]*?\"line\"\\s*:\\s*(\\d+)[^}]*?\"character\"\\s*:\\s*(\\d+)", java.util.regex.Pattern.DOTALL);
-        java.util.regex.Pattern pMsg = java.util.regex.Pattern.compile("\"message\"\\s*:\\s*\"(.*?)\"", java.util.regex.Pattern.DOTALL);
-        java.util.regex.Pattern pSev = java.util.regex.Pattern.compile("\"severity\"\\s*:\\s*(\\d+)");
-        java.util.regex.Matcher mStart = pStart.matcher(obj);
-        java.util.regex.Matcher mEnd = pEnd.matcher(obj);
-        java.util.regex.Matcher mMsg = pMsg.matcher(obj);
-        java.util.regex.Matcher mSev = pSev.matcher(obj);
         int sl = 0, sc = 0, el = 0, ec = 0;
+
         String msg = null;
         Integer sev = null;
+
+        Pattern pStart = java.util.regex.Pattern.compile("\"start\"\\s*:\\s*\\{[^}]*?\"line\"\\s*:\\s*(\\d+)[^}]*?\"character\"\\s*:\\s*(\\d+)", java.util.regex.Pattern.DOTALL);
+        Pattern pEnd = java.util.regex.Pattern.compile("\"end\"\\s*:\\s*\\{[^}]*?\"line\"\\s*:\\s*(\\d+)[^}]*?\"character\"\\s*:\\s*(\\d+)", java.util.regex.Pattern.DOTALL);
+        Pattern pMsg = java.util.regex.Pattern.compile("\"message\"\\s*:\\s*\"(.*?)\"", java.util.regex.Pattern.DOTALL);
+        Pattern pSev = java.util.regex.Pattern.compile("\"severity\"\\s*:\\s*(\\d+)");
+
+        Matcher mStart = pStart.matcher(obj);
+        Matcher mEnd = pEnd.matcher(obj);
+        Matcher mMsg = pMsg.matcher(obj);
+        Matcher mSev = pSev.matcher(obj);
+
         if(mStart.find()) { sl = Integer.parseInt(mStart.group(1)); sc = Integer.parseInt(mStart.group(2)); }
         if(mEnd.find()) { el = Integer.parseInt(mEnd.group(1)); ec = Integer.parseInt(mEnd.group(2)); }
-        if(mMsg.find()) { msg = mMsg.group(1); }
-        if(mSev.find()) { sev = Integer.parseInt(mSev.group(1)); }
+        if(mMsg.find()) {
+            msg = mMsg.group(1);
+        }
+        if(mSev.find()) {
+            sev = Integer.parseInt(mSev.group(1));
+        }
+
         return new RDiagnostic(sl, sc, el, ec, msg != null ? msg : "", sev);
     }
 
@@ -282,9 +295,8 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
 
     private boolean tryCommand(String[] command) {
         try {
-            if(debugMode) {
+            if(debugMode)
                 Logger.info("Trying command: " + String.join(" ", command));
-            }
 
             ProcessBuilder pb = new ProcessBuilder(command);
             pb.redirectErrorStream(false);
@@ -636,6 +648,7 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
 
     public void disconnect() {
         connected.set(false);
+
         if(responseHandler != null)
             responseHandler.interrupt();
 
@@ -649,6 +662,8 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
             if(debugMode)
                 Logger.error("Error closing LSP connections: " + e.getMessage());
         }
+
+        assert !connected.get();
     }
 
     public void setWorkspaceRoot(String path) {

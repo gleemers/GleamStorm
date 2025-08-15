@@ -34,7 +34,7 @@ public class CustomTitleBar extends JPanel {
         super(new BorderLayout());
 
         setOpaque(true);
-        setBorder(new CompoundBorder(new LineBorder(Theme.accent(), 1, true), new EmptyBorder(6, 10, 6, 10)));
+        setBorder(new CompoundBorder(new LineBorder(Theme.bg(), 1, true), new EmptyBorder(6, 10, 6, 10)));
 
         titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));
@@ -43,7 +43,7 @@ public class CustomTitleBar extends JPanel {
         controlsPanel.setOpaque(false);
 
         JButton minimizeBtn = new JButton("–");
-        JButton closeBtn = new JButton("×");
+        JButton closeBtn = new JButton("x");
         Dimension btnSize = new Dimension(28, 20);
         minimizeBtn.setPreferredSize(btnSize);
         closeBtn.setPreferredSize(btnSize);
@@ -74,9 +74,8 @@ public class CustomTitleBar extends JPanel {
         add(controlsPanel, BorderLayout.EAST);
     }
 
-    public void applyTheme(Color background, Color foreground, Color accent) {
+    public void applyTheme(Color background, Color foreground) {
         setBackground(background);
-        setBorder(new CompoundBorder(new LineBorder(accent, 1, true), new EmptyBorder(6, 10, 6, 10)));
 
         titleLabel.setForeground(foreground);
 
@@ -85,7 +84,6 @@ public class CustomTitleBar extends JPanel {
                 button.setBackground(background);
                 button.setForeground(foreground);
                 button.setFocusPainted(false);
-                button.setBorder(new CompoundBorder(new LineBorder(accent, 1, true), new EmptyBorder(2, 8, 2, 8)));
                 button.setOpaque(true);
             }
         }

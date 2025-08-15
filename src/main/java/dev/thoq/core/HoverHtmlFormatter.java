@@ -39,8 +39,10 @@ public final class HoverHtmlFormatter {
 
     static String formatInlineWithEscape(String text, String codeInlineStyle) {
         StringBuilder sb = new StringBuilder();
+
         boolean inCode = false;
         int i = 0;
+
         while(i < text.length()) {
             char c = text.charAt(i);
             if(c == '`') {
