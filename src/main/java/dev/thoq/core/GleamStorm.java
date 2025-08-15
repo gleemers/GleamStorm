@@ -98,9 +98,12 @@ public class GleamStorm extends JFrame {
     };
 
     public GleamStorm() {
+        ToolTipManager.sharedInstance().setDismissDelay(10000);
+
         setUndecorated(true);
         setBackground(new Color(0, 0, 0, 0));
         setResizable(true);
+
         addComponentListener(new ComponentAdapter() {
             @Override
             public void componentResized(ComponentEvent e) {
@@ -1210,14 +1213,18 @@ public class GleamStorm extends JFrame {
         int offset = textPane.viewToModel(lastMousePoint);
         if(offset < 0) return;
         if(offset == lastHoverOffset) return;
+
         lastHoverOffset = offset;
         String text;
+
         try {
             text = textPane.getDocument().getText(0, textPane.getDocument().getLength());
         } catch(BadLocationException e) {
             return;
         }
+
         int[] lc = TextPositionUtil.lineCharFromOffset(text, offset);
+
         lspClient.requestHover(currentFile.getAbsolutePath(), lc[0], lc[1], result -> SwingUtilities.invokeLater(() -> {
             hoverText = (result != null && !result.trim().isEmpty()) ? HoverHtmlFormatter.formatHoverHtml(result) : null;
             textPane.setToolTipText(hoverText);

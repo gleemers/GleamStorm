@@ -23,18 +23,20 @@ public final class HoverHtmlFormatter {
     private HoverHtmlFormatter() {}
 
     public static String formatHoverHtml(String md) {
-        if(md == null)
+        if (md == null || md.trim().isEmpty()) {
             return null;
+        }
 
         String html = md;
+
         html = escapeHtml(html);
-        html = html.replaceAll("```([\\s\\S]*?)```", "<pre><code>$1</code></pre>");
+        html = html.replaceAll("```([\\s\\S]*?)```", "$1");
         html = formatInlineWithEscape(html, "background:#2b2b2b;color:#e6e6e6;padding:2px 4px;border-radius:4px;font-family:monospace;");
-        html = html.replaceAll("\\*\\*([^*]+)\\*\\*", "<b>$1</b>");
-        html = html.replaceAll("\\*([^*]+)\\*", "<i>$1</i>");
+        html = html.replaceAll("(?<!<code[^>]>.?)\\*\\*([^*\\n]+?)\\*\\*(?!.*?</code>)", "<strong>$1</strong>");
+        html = html.replaceAll("(?<!<code[^>]>.?)\\*([^*\\n]+?)\\*(?!.*?</code>)", "<em>$1</em>");
         html = html.replace("\n", "<br/>");
 
-        return "<html><body>" + html + "</body></html>";
+        return "<html>" + html + "</html>";
     }
 
     static String formatInlineWithEscape(String text, String codeInlineStyle) {
