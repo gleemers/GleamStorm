@@ -28,16 +28,16 @@ import javax.swing.*;
 
 public class Main {
     public static void main(String[] args) {
-        Thread.currentThread().setName("Bootstrap");
-        Logger.info("GleamStorm starting...");
-
-        FlatLaf.setup(new FlatDarkPurpleIJTheme());
-
         if(System.getProperty("os.name").toLowerCase().contains("mac")) {
             System.setProperty("apple.laf.useScreenMenuBar", "true");
             System.setProperty("apple.awt.application.name", "GleamStorm");
             System.setProperty("apple.awt.application.appearance", "NSAppearanceNameDarkAqua");
         }
+
+        Thread.currentThread().setName("Bootstrap");
+        Logger.info("GleamStorm starting...");
+
+        FlatLaf.setup(new FlatDarkPurpleIJTheme());
 
         SwingUtilities.invokeLater(() -> {
             Thread.currentThread().setName("Bootstrap");
