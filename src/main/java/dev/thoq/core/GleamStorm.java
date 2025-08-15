@@ -24,15 +24,18 @@ import dev.thoq.integration.gleam.GleamSyntaxHighlighter;
 import dev.thoq.integration.highlight.ISyntaxHighlighter;
 import dev.thoq.integration.lsp.RDiagnostic;
 import dev.thoq.log.Logger;
-import dev.thoq.ui.*;
+import dev.thoq.ui.CustomTitleBar;
+import dev.thoq.ui.SimplePathPicker;
+import dev.thoq.ui.SquigglePainter;
+import dev.thoq.ui.Terminal;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.Highlighter;
+import javax.swing.text.*;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
@@ -45,12 +48,9 @@ import java.awt.datatransfer.StringSelection;
 import java.awt.event.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.List;
 
 @SuppressWarnings({"CallToPrintStackTrace", "deprecation", "MagicConstant", "unused"})
@@ -77,6 +77,8 @@ public class GleamStorm extends JFrame {
     private Point lastMousePoint;
     private int lastHoverOffset = -1;
     private String hoverText = null;
+    private BufferedWriter processWriter;
+    private final Terminal terminal = new Terminal();
 
     private static final String[] GLEAM_KEYWORDS = {
             "as", "assert", "case", "const", "external", "fn", "if", "import",
@@ -512,7 +514,7 @@ public class GleamStorm extends JFrame {
 
                 TreePath path = fileTree.getPathForLocation(e.getX(), e.getY());
 
-                assert path != null;
+                if(path == null) return;
 
                 Object last = ((DefaultMutableTreeNode) path.getLastPathComponent()).getUserObject();
 
@@ -527,9 +529,15 @@ public class GleamStorm extends JFrame {
 
         JScrollPane treeScroll = new JScrollPane(fileTree);
 
-        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, scrollPane);
-        splitPane.setDividerLocation(260);
-        splitPane.setBorder(null);
+        JSplitPane horizontalSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, scrollPane);
+        horizontalSplit.setDividerLocation(260);
+        horizontalSplit.setBorder(null);
+
+        terminal.initializeTerminal(currentFolder, textPane);
+        terminal.mainSplitPane = new JSplitPane(JSplitPane.VERTICAL_SPLIT);
+        terminal.mainSplitPane.setTopComponent(horizontalSplit);
+        terminal.mainSplitPane.setBorder(null);
+        terminal.mainSplitPane.setResizeWeight(1.0);
 
         JPanel northStack = new JPanel();
         northStack.setLayout(new BoxLayout(northStack, BoxLayout.Y_AXIS));
@@ -541,7 +549,7 @@ public class GleamStorm extends JFrame {
 
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(northStack, BorderLayout.NORTH);
-        mainPanel.add(splitPane, BorderLayout.CENTER);
+        mainPanel.add(terminal.mainSplitPane, BorderLayout.CENTER);
         mainPanel.add(statusLabel, BorderLayout.SOUTH);
 
         add(mainPanel);
@@ -560,16 +568,7 @@ public class GleamStorm extends JFrame {
 
         JMenu fileMenu = getFileMenu();
         JMenu editMenu = getEditMenu();
-
-        JMenu toolsMenu = new JMenu("Tools");
-        JMenuItem formatItem = new JMenuItem("Format Document");
-        JMenuItem checkItem = new JMenuItem("Check Syntax");
-
-        formatItem.addActionListener(_ -> formatDocument());
-        checkItem.addActionListener(_ -> checkSyntax());
-
-        toolsMenu.add(formatItem);
-        toolsMenu.add(checkItem);
+        JMenu toolsMenu = getToolsMenu();
 
         menuBar.add(newMenu);
         menuBar.add(fileMenu);
@@ -577,6 +576,24 @@ public class GleamStorm extends JFrame {
         menuBar.add(toolsMenu);
 
         return menuBar;
+    }
+
+    private JMenu getToolsMenu() {
+        JMenu toolsMenu = new JMenu("Tools");
+
+        JMenuItem formatItem = new JMenuItem("Format Document");
+        JMenuItem checkItem = new JMenuItem("Check Syntax");
+        JMenuItem terminalItem = new JMenuItem("Terminal");
+
+        formatItem.addActionListener(_ -> formatDocument());
+        checkItem.addActionListener(_ -> checkSyntax());
+        terminalItem.addActionListener(_ -> terminal.toggleTerminal(textPane));
+
+        toolsMenu.add(formatItem);
+        toolsMenu.add(checkItem);
+        toolsMenu.add(terminalItem);
+
+        return toolsMenu;
     }
 
     private JMenu getEditMenu() {
@@ -924,18 +941,23 @@ public class GleamStorm extends JFrame {
             JOptionPane.showMessageDialog(this, "Open a folder first to create a subfolder.", "No Folder", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
+
         String name = JOptionPane.showInputDialog(this, "New folder name:", "New Folder", JOptionPane.PLAIN_MESSAGE);
         if(name == null) return;
         name = name.trim();
+
         if(name.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Folder name cannot be empty.", "Invalid Name", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
         File newDir = new File(currentFolder, name);
+
         if(newDir.exists()) {
             JOptionPane.showMessageDialog(this, "Folder already exists.", "Exists", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
         if(newDir.mkdirs()) {
             statusLabel.setText(" Created folder: " + newDir.getAbsolutePath());
             refreshFileTree();
