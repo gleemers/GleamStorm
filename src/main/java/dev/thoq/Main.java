@@ -20,7 +20,6 @@ package dev.thoq;
 
 import com.formdev.flatlaf.FlatLaf;
 import com.formdev.flatlaf.intellijthemes.FlatDarkPurpleIJTheme;
-import com.formdev.flatlaf.intellijthemes.FlatGradiantoMidnightBlueIJTheme;
 import dev.thoq.log.Logger;
 import dev.thoq.ui.SplashScreen;
 import dev.thoq.ui.WelcomeScreen;

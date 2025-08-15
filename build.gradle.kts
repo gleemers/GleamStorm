@@ -18,6 +18,7 @@
 
 plugins {
     id("java")
+    id("com.gradleup.shadow") version "9.0.2"
 }
 
 group = "dev.thoq"
@@ -39,4 +40,14 @@ dependencies {
 
 tasks.test {
     useJUnitPlatform()
+}
+
+tasks.build {
+    dependsOn(tasks.shadowJar)
+}
+
+tasks.jar {
+    manifest {
+        attributes["Main-Class"] = "dev.thoq.GleamStorm"
+    }
 }

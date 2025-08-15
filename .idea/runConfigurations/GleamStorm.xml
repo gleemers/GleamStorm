@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="GleamStorm: Development" type="Application" factoryName="Application">
+  <configuration default="false" name="GleamStorm" type="Application" factoryName="Application">
     <option name="MAIN_CLASS_NAME" value="dev.thoq.Main" />
     <module name="GleamStorm.main" />
     <method v="2">
