@@ -20,13 +20,11 @@ package dev.thoq.ui;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class SimplePathPicker extends JDialog {
@@ -51,28 +49,15 @@ public class SimplePathPicker extends JDialog {
         setSize(700, 500);
         setLocationRelativeTo(owner);
 
-        Color bg = Theme.menuBg();
-        Color fg = Theme.fg();
-        Color border = Theme.border();
-        Color accent = Theme.accent();
-        Color menu = Theme.menuBg();
-
         JPanel root = new JPanel(new BorderLayout());
         root.setBorder(new EmptyBorder(16, 16, 16, 16));
-        root.setBackground(bg);
 
         JPanel top = new JPanel(new BorderLayout(8, 8));
         top.setOpaque(false);
 
         pathField.setEditable(false);
-        pathField.setBackground(menu);
-        pathField.setForeground(fg);
-        pathField.setBorder(new LineBorder(border, 1, true));
 
         JButton upBtn = new JButton("Up");
-        upBtn.setBackground(menu);
-        upBtn.setForeground(fg);
-        upBtn.setBorder(new LineBorder(accent, 1, true));
         upBtn.addActionListener(_ -> navigateUp());
         top.add(pathField, BorderLayout.CENTER);
         top.add(upBtn, BorderLayout.EAST);
@@ -84,16 +69,10 @@ public class SimplePathPicker extends JDialog {
                 File f = (File) value;
                 lbl.setText(f.getName().isEmpty() ? f.getAbsolutePath() : f.getName());
                 lbl.setBorder(new EmptyBorder(6, 10, 6, 10));
-                lbl.setBackground(isSelected ? Theme.selection() : menu);
-                lbl.setForeground(fg);
                 return lbl;
             }
         });
 
-        list.setBackground(menu);
-        list.setForeground(fg);
-        list.setSelectionBackground(Theme.selection());
-        list.setBorder(new LineBorder(border, 1, true));
         list.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -102,16 +81,11 @@ public class SimplePathPicker extends JDialog {
         });
 
         JScrollPane sp = new JScrollPane(list);
-        sp.setBorder(new LineBorder(border, 1, true));
-        sp.getViewport().setBackground(menu);
 
         JPanel bottom = new JPanel(new BorderLayout(8, 8));
         bottom.setOpaque(false);
 
         if(mode == Mode.SAVE_FILE) {
-            nameField.setBackground(menu);
-            nameField.setForeground(fg);
-            nameField.setBorder(new LineBorder(border, 1, true));
             bottom.add(nameField, BorderLayout.CENTER);
         }
 
@@ -119,12 +93,6 @@ public class SimplePathPicker extends JDialog {
         actions.setOpaque(false);
         JButton cancel = new JButton("Cancel");
         JButton select = new JButton(mode == Mode.DIRECTORY ? "Select Folder" : mode == Mode.OPEN_FILE ? "Open" : "Save");
-
-        for(JButton b : Arrays.asList(cancel, select)) {
-            b.setBackground(menu);
-            b.setForeground(fg);
-            b.setBorder(new LineBorder(accent, 1, true));
-        }
 
         cancel.addActionListener(_ -> {
             result = null;

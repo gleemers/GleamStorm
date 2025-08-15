@@ -28,10 +28,7 @@ import dev.thoq.ui.*;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.text.BadLocationException;
@@ -56,21 +53,15 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 
-import static dev.thoq.ui.Theme.*;
-
 @SuppressWarnings({"CallToPrintStackTrace", "deprecation", "MagicConstant", "unused"})
 public class GleamStorm extends JFrame {
     private JTextPane textPane;
     private JLabel statusLabel;
     private File currentFile;
     private File currentFolder;
-    private boolean isDarkTheme = true;
+    private final boolean isDarkTheme = true;
     private ISyntaxHighlighter syntaxHighlighter;
     private GleamLSPClient lspClient;
-    private JScrollPane scrollPane;
-    private JPanel mainPanel;
-    private CustomTitleBar titleBar;
-    private JSplitPane splitPane;
     private JTree fileTree;
     private UndoManager undoManager;
     private DefaultTreeModel treeModel;
@@ -117,7 +108,6 @@ public class GleamStorm extends JFrame {
         loadIcon();
         initializeComponents();
         setupUI();
-        applyTheme();
         initializeLSP();
     }
 
@@ -161,8 +151,6 @@ public class GleamStorm extends JFrame {
         textPane.setMargin(new Insets(15, 15, 15, 15));
 
         initializeSuggestions();
-
-        textPane.setSelectionColor(isDarkTheme ? DARK_SELECTION : LIGHT_SELECTION);
 
         syntaxHighlighter = new GleamSyntaxHighlighter();
 
@@ -504,11 +492,11 @@ public class GleamStorm extends JFrame {
         setJMenuBar(menuBar);
 
         JToolBar toolBar = createToolBar();
-        titleBar = new CustomTitleBar(this, "GleamStorm");
+        CustomTitleBar titleBar = new CustomTitleBar(this, "GleamStorm");
         boolean isMac = System.getProperty("os.name").toLowerCase().contains("mac");
         boolean useScreenMenuBar = "true".equalsIgnoreCase(System.getProperty("apple.laf.useScreenMenuBar"));
 
-        scrollPane = new JScrollPane(textPane);
+        JScrollPane scrollPane = new JScrollPane(textPane);
         scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
 
@@ -517,11 +505,6 @@ public class GleamStorm extends JFrame {
         fileTree = new JTree(treeModel);
         fileTree.setRootVisible(true);
         fileTree.setShowsRootHandles(true);
-        fileTree.setCellRenderer(new ThemedTreeCellRenderer(
-                isDarkTheme ? DARK_BG : LIGHT_BG,
-                isDarkTheme ? DARK_FG : LIGHT_FG,
-                isDarkTheme ? DARK_SELECTION : LIGHT_SELECTION
-        ));
         fileTree.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -544,7 +527,7 @@ public class GleamStorm extends JFrame {
 
         JScrollPane treeScroll = new JScrollPane(fileTree);
 
-        splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, scrollPane);
+        JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, treeScroll, scrollPane);
         splitPane.setDividerLocation(260);
         splitPane.setBorder(null);
 
@@ -556,7 +539,7 @@ public class GleamStorm extends JFrame {
             northStack.add(toolBar);
         }
 
-        mainPanel = new JPanel(new BorderLayout());
+        JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(northStack, BorderLayout.NORTH);
         mainPanel.add(splitPane, BorderLayout.CENTER);
         mainPanel.add(statusLabel, BorderLayout.SOUTH);
@@ -566,7 +549,6 @@ public class GleamStorm extends JFrame {
 
     private JMenuBar createMenuBar() {
         JMenuBar menuBar = new JMenuBar();
-        menuBar.setBorder(createCustomMenuBorder());
 
         JMenu newMenu = new JMenu("New");
         JMenuItem newFileItem = new JMenuItem("New File");
@@ -653,33 +635,19 @@ public class GleamStorm extends JFrame {
         return fileMenu;
     }
 
-    private Border createCustomMenuBorder() {
-        Color borderColor = isDarkTheme ? DARK_BORDER : LIGHT_BORDER;
-        return new CompoundBorder(
-                new LineBorder(borderColor, 1, true),
-                new EmptyBorder(2, 2, 2, 2)
-        );
-    }
-
     private JToolBar createToolBar() {
         JToolBar toolBar = new JToolBar();
         toolBar.setFloatable(false);
-        toolBar.setBorder(new CompoundBorder(
-                new LineBorder(isDarkTheme ? DARK_BORDER : LIGHT_BORDER, 1, true),
-                new EmptyBorder(8, 8, 8, 8)
-        ));
 
         JButton newBtn = createStyledButton("New");
         JButton openBtn = createStyledButton("Open");
         JButton openFolderBtn = createStyledButton("Open Folder");
         JButton saveBtn = createStyledButton("Save");
-        JButton themeBtn = createStyledButton("Theme");
 
         newBtn.addActionListener(_ -> newFile());
         openBtn.addActionListener(_ -> openFile());
         openFolderBtn.addActionListener(_ -> openFolder());
         saveBtn.addActionListener(_ -> saveFile());
-        themeBtn.addActionListener(_ -> toggleTheme());
 
         toolBar.add(newBtn);
         toolBar.add(Box.createHorizontalStrut(5));
@@ -689,7 +657,6 @@ public class GleamStorm extends JFrame {
         toolBar.add(Box.createHorizontalStrut(5));
         toolBar.add(saveBtn);
         toolBar.add(Box.createHorizontalStrut(15));
-        toolBar.add(themeBtn);
 
         return toolBar;
     }
@@ -700,131 +667,7 @@ public class GleamStorm extends JFrame {
         button.setFont(new Font("SansSerif", Font.PLAIN, 12));
         button.setPreferredSize(new Dimension(70, 30));
 
-        Color accentColor = isDarkTheme ? DARK_ACCENT : LIGHT_ACCENT;
-
-        button.setBorder(new CompoundBorder(
-                new LineBorder(accentColor, 1, true),
-                new EmptyBorder(4, 8, 4, 8)
-        ));
-
         return button;
-    }
-
-    private void applyTheme() {
-        Color bgColor = isDarkTheme ? DARK_BG : LIGHT_BG;
-        Color fgColor = isDarkTheme ? DARK_FG : LIGHT_FG;
-        Color menuBgColor = isDarkTheme ? DARK_MENU_BG : LIGHT_MENU_BG;
-        Color borderColor = isDarkTheme ? DARK_BORDER : LIGHT_BORDER;
-        Color scrollColor = isDarkTheme ? DARK_SCROLL : LIGHT_SCROLL;
-        Color selectionColor = isDarkTheme ? DARK_SELECTION : LIGHT_SELECTION;
-
-        mainPanel.setBackground(bgColor);
-        textPane.setBackground(bgColor);
-        textPane.setForeground(fgColor);
-        textPane.setCaretColor(fgColor);
-        textPane.setSelectionColor(selectionColor);
-        statusLabel.setBackground(menuBgColor);
-        statusLabel.setForeground(fgColor);
-        statusLabel.setOpaque(true);
-        statusLabel.setBorder(new CompoundBorder(
-                new LineBorder(borderColor, 1, true),
-                new EmptyBorder(8, 15, 8, 15)
-        ));
-
-        scrollPane.setBackground(bgColor);
-        scrollPane.getViewport().setBackground(bgColor);
-        suggestionList.setBackground(menuBgColor);
-        suggestionList.setForeground(fgColor);
-        suggestionList.setSelectionBackground(selectionColor);
-        suggestionPopup.setBackground(menuBgColor);
-        suggestionPopup.setBorder(new LineBorder(borderColor, 1, true));
-        scrollPane.getVerticalScrollBar().setUI(new CustomScrollBarUI(scrollColor, bgColor));
-        scrollPane.getHorizontalScrollBar().setUI(new CustomScrollBarUI(scrollColor, bgColor));
-
-        JMenuBar menuBar = getJMenuBar();
-        assert menuBar != null;
-
-        UIManager.put("MenuBar.background", menuBgColor);
-        UIManager.put("Menu.background", menuBgColor);
-        UIManager.put("MenuItem.background", menuBgColor);
-        UIManager.put("PopupMenu.background", menuBgColor);
-        UIManager.put("MenuItem.selectionBackground", selectionColor);
-        UIManager.put("MenuItem.foreground", fgColor);
-        UIManager.put("Menu.foreground", fgColor);
-        UIManager.put("PopupMenu.foreground", fgColor);
-        UIManager.put("ToolTip.background", menuBgColor);
-        UIManager.put("ToolTip.foreground", fgColor);
-        UIManager.put("ToolTip.border", new LineBorder(borderColor, 1, true));
-        UIManager.put("TextField.background", menuBgColor);
-        UIManager.put("TextField.foreground", fgColor);
-        UIManager.put("TextField.caretForeground", fgColor);
-        UIManager.put("TextField.border", new LineBorder(borderColor, 1, true));
-        UIManager.put("PasswordField.background", menuBgColor);
-        UIManager.put("PasswordField.foreground", fgColor);
-        UIManager.put("PasswordField.caretForeground", fgColor);
-        UIManager.put("PasswordField.border", new LineBorder(borderColor, 1, true));
-        UIManager.put("TextArea.background", menuBgColor);
-        UIManager.put("TextArea.foreground", fgColor);
-        UIManager.put("TextArea.caretForeground", fgColor);
-        UIManager.put("TextArea.border", new LineBorder(borderColor, 1, true));
-        UIManager.put("ComboBox.background", menuBgColor);
-        UIManager.put("ComboBox.foreground", fgColor);
-        UIManager.put("ComboBox.border", new LineBorder(borderColor, 1, true));
-
-        menuBar.setBackground(menuBgColor);
-        menuBar.setOpaque(true);
-        menuBar.setBorder(createCustomMenuBorder());
-
-        for(int i = 0; i < menuBar.getMenuCount(); i++) {
-            JMenu menu = menuBar.getMenu(i);
-
-            if(menu == null) continue;
-
-            menu.setBackground(menuBgColor);
-            menu.setForeground(fgColor);
-            menu.setOpaque(true);
-            JPopupMenu popup = menu.getPopupMenu();
-
-            if(popup != null) {
-                popup.setOpaque(true);
-                popup.setBackground(menuBgColor);
-                popup.setBorder(new LineBorder(borderColor, 1, true));
-            }
-
-            styleMenuItems(menu, menuBgColor, fgColor);
-        }
-
-        SwingUtilities.updateComponentTreeUI(menuBar);
-
-        assert titleBar != null;
-        Color accent = isDarkTheme ? DARK_ACCENT : LIGHT_ACCENT;
-        titleBar.applyTheme(menuBgColor, fgColor);
-
-        assert fileTree != null;
-        fileTree.setCellRenderer(new ThemedTreeCellRenderer(bgColor, fgColor, selectionColor));
-        fileTree.setBackground(bgColor);
-        fileTree.setForeground(fgColor);
-
-        assert splitPane != null;
-        splitPane.setBackground(menuBgColor);
-        splitPane.setDividerSize(6);
-
-        Component[] components = mainPanel.getComponents();
-        for(Component comp : components) {
-            if(comp instanceof JToolBar toolBar) {
-                toolBar.setBackground(menuBgColor);
-                toolBar.setBorder(new CompoundBorder(
-                        new LineBorder(borderColor, 1, true),
-                        new EmptyBorder(8, 8, 8, 8)
-                ));
-                styleToolBar(toolBar, menuBgColor, fgColor);
-            }
-        }
-
-        syntaxHighlighter.setTheme(isDarkTheme);
-        syntaxHighlighter.highlight(textPane);
-
-        repaint();
     }
 
     private void styleMenuItems(JMenu menu, Color bgColor, Color fgColor) {
@@ -844,21 +687,9 @@ public class GleamStorm extends JFrame {
             if(comp instanceof JButton button) {
                 button.setBackground(bgColor);
                 button.setForeground(fgColor);
-
-                Color accentColor = isDarkTheme ? DARK_ACCENT : LIGHT_ACCENT;
-                button.setBorder(new CompoundBorder(
-                        new LineBorder(accentColor, 1, true),
-                        new EmptyBorder(4, 8, 4, 8)
-                ));
                 button.setOpaque(true);
             }
         }
-    }
-
-    private void toggleTheme() {
-        isDarkTheme = !isDarkTheme;
-        applyTheme();
-        statusLabel.setText(isDarkTheme ? " Dark theme enabled" : " Light theme enabled");
     }
 
     private void newFile() {
@@ -1116,8 +947,6 @@ public class GleamStorm extends JFrame {
     private void initializeLSP() {
         new Thread(() -> {
             try {
-                Thread.sleep(1000);
-
                 if(lspClient.connect()) {
                     lspClient.setDiagnosticsListener((uri, diagnostics) -> {
                         if(currentFile == null) return;
@@ -1125,8 +954,6 @@ public class GleamStorm extends JFrame {
                         if(!fileUri.equals(uri)) return;
                         SwingUtilities.invokeLater(() -> applyDiagnostics(diagnostics));
                     });
-
-                    Thread.sleep(2000);
 
                     SwingUtilities.invokeLater(() -> {
                         if(lspClient.isConnected()) {
@@ -1169,6 +996,7 @@ public class GleamStorm extends JFrame {
         }
 
         String firstMsg = null;
+
         for(RDiagnostic d : diagnostics) {
             int start = TextPositionUtil.offsetFromLineChar(text, d.startLine(), d.startChar());
             int end = TextPositionUtil.offsetFromLineChar(text, d.endLine(), d.endChar());

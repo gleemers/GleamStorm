@@ -26,9 +26,6 @@ import java.awt.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static dev.thoq.ui.Theme.DARK_FG;
-import static dev.thoq.ui.Theme.LIGHT_FG;
-
 public class GleamSyntaxHighlighter implements ISyntaxHighlighter {
     private boolean isDarkTheme = true;
 
@@ -111,7 +108,6 @@ public class GleamSyntaxHighlighter implements ISyntaxHighlighter {
     }
 
     private void updateStyleColors() {
-        StyleConstants.setForeground(defaultStyle, isDarkTheme ? DARK_FG : LIGHT_FG);
         StyleConstants.setForeground(keywordStyle, getKeywordColor());
         StyleConstants.setForeground(typeStyle, getTypeColor());
         StyleConstants.setForeground(stringStyle, getStringColor());

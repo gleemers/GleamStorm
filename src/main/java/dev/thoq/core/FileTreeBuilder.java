@@ -27,7 +27,13 @@ public final class FileTreeBuilder {
     }
 
     public static DefaultMutableTreeNode buildNode(File file) {
-        DefaultMutableTreeNode node = new DefaultMutableTreeNode(file);
+        DefaultMutableTreeNode node = new DefaultMutableTreeNode(file) {
+            @Override
+            public String toString() {
+                File f = (File) getUserObject();
+                return f.getName();
+            }
+        };
 
         if(file.isDirectory())
             buildFileTreeNode(file, node);

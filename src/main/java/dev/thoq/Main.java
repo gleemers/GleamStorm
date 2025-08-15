@@ -18,6 +18,9 @@
 
 package dev.thoq;
 
+import com.formdev.flatlaf.FlatLaf;
+import com.formdev.flatlaf.intellijthemes.FlatDarkPurpleIJTheme;
+import com.formdev.flatlaf.intellijthemes.FlatGradiantoMidnightBlueIJTheme;
 import dev.thoq.log.Logger;
 import dev.thoq.ui.SplashScreen;
 import dev.thoq.ui.WelcomeScreen;
@@ -28,6 +31,8 @@ public class Main {
     public static void main(String[] args) {
         Thread.currentThread().setName("Bootstrap");
         Logger.info("GleamStorm starting...");
+
+        FlatLaf.setup(new FlatDarkPurpleIJTheme());
 
         if(System.getProperty("os.name").toLowerCase().contains("mac")) {
             System.setProperty("apple.laf.useScreenMenuBar", "true");

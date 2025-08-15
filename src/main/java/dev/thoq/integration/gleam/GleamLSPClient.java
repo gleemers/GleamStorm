@@ -311,8 +311,6 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
 
             lspProcess = pb.start();
 
-            Thread.sleep(100);
-
             if(!lspProcess.isAlive()) {
                 if(debugMode)
                     Logger.info("Process failed to start");
@@ -441,7 +439,6 @@ public class GleamLSPClient implements dev.thoq.integration.lsp.ILSPClient {
                 Logger.info("Initializing LSP with rootUri: " + rootUri);
 
             sendRequestDirect(initRequest);
-            Thread.sleep(500);
 
             String initializedRequest = loadTemplate("initialized.json");
             sendNotificationDirect("initialized", initializedRequest);

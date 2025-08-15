@@ -19,9 +19,6 @@
 package dev.thoq.ui;
 
 import javax.swing.*;
-import javax.swing.border.CompoundBorder;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -34,7 +31,6 @@ public class CustomTitleBar extends JPanel {
         super(new BorderLayout());
 
         setOpaque(true);
-        setBorder(new CompoundBorder(new LineBorder(Theme.bg(), 1, true), new EmptyBorder(6, 10, 6, 10)));
 
         titleLabel = new JLabel(title);
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 13));

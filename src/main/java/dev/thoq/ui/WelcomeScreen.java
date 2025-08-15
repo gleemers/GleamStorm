@@ -23,9 +23,7 @@ import dev.thoq.log.Logger;
 
 import javax.imageio.ImageIO;
 import javax.swing.*;
-import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
@@ -37,8 +35,6 @@ import java.util.function.Consumer;
 
 @SuppressWarnings("SameParameterValue")
 public class WelcomeScreen extends JFrame {
-    private final JPanel mainPanel = new JPanel(new BorderLayout());
-    private final CustomTitleBar titleBar = new CustomTitleBar(this, "GleamStorm");
     private final CardLayout centerLayout = new CardLayout();
     private final JPanel centerPanel = new JPanel(centerLayout);
 
@@ -63,6 +59,7 @@ public class WelcomeScreen extends JFrame {
 
         JPanel northStack = new JPanel();
         northStack.setLayout(new BoxLayout(northStack, BoxLayout.Y_AXIS));
+        CustomTitleBar titleBar = new CustomTitleBar(this, "GleamStorm");
         northStack.add(titleBar);
 
         JPanel home = new JPanel(new BorderLayout());
@@ -87,14 +84,13 @@ public class WelcomeScreen extends JFrame {
         centerLayout.show(centerPanel, "home");
 
         JLabel footer = new JLabel("Welcome to GleamStorm", SwingConstants.LEFT);
-        footer.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(10, 14, 10, 14)));
 
+        JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(northStack, BorderLayout.NORTH);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
         mainPanel.add(footer, BorderLayout.SOUTH);
 
         add(mainPanel);
-        applyTheme();
     }
 
     private void loadIcon() {
@@ -153,15 +149,10 @@ public class WelcomeScreen extends JFrame {
         JButton newBtn = buildPrimaryButton("New Gleam Project");
         JButton openBtn = buildSecondaryButton("Open");
         JButton cloneBtn = buildSecondaryButton("Clone from Git");
-        JButton themeBtn = buildSecondaryButton("Toggle Theme");
 
         newBtn.addActionListener(_ -> showNewProjectUI());
         openBtn.addActionListener(_ -> onOpenProject());
         cloneBtn.addActionListener(_ -> centerLayout.show(centerPanel, "clone"));
-        themeBtn.addActionListener(_ -> {
-            Theme.toggle();
-            applyTheme();
-        });
 
         gbc.gridy = 0;
         panel.add(newBtn, gbc);
@@ -172,9 +163,6 @@ public class WelcomeScreen extends JFrame {
         gbc.gridy = 2;
         panel.add(cloneBtn, gbc);
 
-        gbc.gridy = 3;
-        panel.add(themeBtn, gbc);
-
         return panel;
     }
 
@@ -182,7 +170,6 @@ public class WelcomeScreen extends JFrame {
         JButton b = new JButton(text);
         b.setFont(new Font("SansSerif", Font.BOLD, 16));
         b.setFocusPainted(false);
-        b.setBorder(new CompoundBorder(new LineBorder(getAccentColor(), 1, true), new EmptyBorder(12, 16, 12, 16)));
 
         return b;
     }
@@ -191,94 +178,8 @@ public class WelcomeScreen extends JFrame {
         JButton b = new JButton(text);
         b.setFont(new Font("SansSerif", Font.PLAIN, 14));
         b.setFocusPainted(false);
-        b.setBorder(new CompoundBorder(new LineBorder(getAccentColor(), 1, true), new EmptyBorder(10, 14, 10, 14)));
 
         return b;
-    }
-
-    private void applyTheme() {
-        Color bg = Theme.bg();
-        Color fg = Theme.fg();
-        Color menu = Theme.menuBg();
-        Color accent = Theme.accent();
-
-        mainPanel.setBackground(bg);
-        titleBar.applyTheme(menu, fg);
-
-        styleTree(getContentPane(), bg, fg, menu, accent);
-
-        SwingUtilities.updateComponentTreeUI(this);
-        repaint();
-    }
-
-    private void styleTree(Component comp, Color bg, Color fg, Color menu, Color accent) {
-        if(comp == null) return;
-
-        if(comp instanceof JPanel)
-            comp.setBackground(bg);
-
-        if(comp instanceof JLabel)
-            comp.setForeground(fg);
-
-        if(comp instanceof JButton b) {
-            b.setBackground(menu);
-            b.setForeground(fg);
-            b.setOpaque(true);
-            b.setBorder(new CompoundBorder(new LineBorder(accent, 1, true), new EmptyBorder(10, 14, 10, 14)));
-        }
-
-        if(comp instanceof JTextField textField) {
-            textField.setBackground(menu);
-            textField.setForeground(fg);
-            textField.setCaretColor(fg);
-            textField.setOpaque(true);
-            textField.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(6, 8, 6, 8)));
-        }
-
-        if(comp instanceof JTextArea textArea) {
-            textArea.setBackground(menu);
-            textArea.setForeground(fg);
-            textArea.setCaretColor(fg);
-            textArea.setOpaque(true);
-            textArea.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(6, 8, 6, 8)));
-        }
-
-        if(comp instanceof JPasswordField passwordField) {
-            passwordField.setBackground(menu);
-            passwordField.setForeground(fg);
-            passwordField.setCaretColor(fg);
-            passwordField.setOpaque(true);
-            passwordField.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(6, 8, 6, 8)));
-        }
-
-        if(comp instanceof JComboBox<?> comboBox) {
-            comboBox.setBackground(menu);
-            comboBox.setForeground(fg);
-            comboBox.setOpaque(true);
-            comboBox.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(4, 6, 4, 6)));
-        }
-
-        if(comp instanceof JScrollPane scrollPane) {
-            scrollPane.setBackground(bg);
-            scrollPane.getViewport().setBackground(bg);
-            scrollPane.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(2, 2, 2, 2)));
-        }
-
-        if(comp instanceof JComponent)
-            comp.setForeground(fg);
-
-        if(comp instanceof Container) {
-            for(Component child : ((Container) comp).getComponents())
-                styleTree(child, bg, fg, menu, accent);
-        }
-    }
-
-    private Color getAccentColor() {
-        return Theme.accent();
-    }
-
-    private Color getBorderColor() {
-        return Theme.border();
     }
 
     private void showNewProjectUI() {
@@ -585,9 +486,6 @@ public class WelcomeScreen extends JFrame {
         JLabel label = new JLabel(text);
 
         dialog.setUndecorated(true);
-        panel.setBorder(new CompoundBorder(new LineBorder(getBorderColor(), 1, true), new EmptyBorder(16, 20, 16, 20)));
-        panel.setBackground(Theme.menuBg());
-        label.setForeground(Theme.fg());
         panel.add(label, BorderLayout.CENTER);
         dialog.getContentPane().add(panel);
         dialog.pack();
