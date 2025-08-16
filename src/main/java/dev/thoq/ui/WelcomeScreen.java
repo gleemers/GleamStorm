@@ -40,6 +40,7 @@ public class WelcomeScreen extends JFrame {
 
     public WelcomeScreen() {
         setUndecorated(true);
+        setResizable(false);
         setBackground(new Color(0, 0, 0, 0));
         addComponentListener(new ComponentAdapter() {
             @Override
