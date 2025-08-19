@@ -13,7 +13,7 @@ import org.jetbrains.compose.ui.tooling.preview.Preview
 
 @Composable
 @Preview
-fun App(colorScheme: ColorScheme = darkColorScheme()) {
+fun App(dir: String, colorScheme: ColorScheme = darkColorScheme()) {
     val state = remember { EditorState.Project }
     val editor = Editor()
 
@@ -26,7 +26,7 @@ fun App(colorScheme: ColorScheme = darkColorScheme()) {
     when(state) {
         EditorState.Home -> {}
         EditorState.Wizard -> {}
-        EditorState.Project -> InProject(colorScheme)
+        EditorState.Project -> InProject(dir = dir, colorScheme = colorScheme)
         EditorState.Settings -> {}
     }
 }

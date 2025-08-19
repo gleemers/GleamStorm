@@ -15,7 +15,7 @@ import java.io.File
 
 @Composable
 @Preview
-fun InProject(colorScheme: ColorScheme = darkColorScheme()) {
+fun InProject(dir: String, colorScheme: ColorScheme = darkColorScheme()) {
     val currentFile = remember { mutableStateOf<File?>(null) }
     val editorText = remember { mutableStateOf("") }
 
@@ -53,7 +53,7 @@ fun InProject(colorScheme: ColorScheme = darkColorScheme()) {
                     .fillMaxHeight()
             ) {
                 FileTree(
-                    directory = "/home/thoq/Projects/glee",
+                    directory = dir,
                     colorScheme = colorScheme,
                     onFileClick = onFileClick
                 )
