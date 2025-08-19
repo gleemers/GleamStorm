@@ -35,9 +35,8 @@ fun buildFileTree(rootPath: String, expandedFolders: Set<String>): List<FileTree
                 val isExpanded = expandedFolders.contains(child.absolutePath)
                 result.add(FileTreeNode(child, depth, isExpanded))
 
-                if(child.isDirectory && isExpanded) {
+                if(child.isDirectory && isExpanded)
                     result.addAll(buildTreeRecursive(child, depth + 1))
-                }
             }
         } catch(e: Exception) {
             Logger.error("file-tree", "Error reading directory: ${directory.absolutePath}")
@@ -53,7 +52,7 @@ fun buildFileTree(rootPath: String, expandedFolders: Set<String>): List<FileTree
 @Composable
 @Preview
 fun FileTree(
-    directory: String = "/sample",
+    directory: String = ".",
     colorScheme: ColorScheme = darkColorScheme(),
     onFileClick: (File) -> Unit = {},
 ) {
