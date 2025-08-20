@@ -26,7 +26,7 @@ fun launch(args: Array<String>) = application {
     Thread.currentThread().name = "glee-event-loop"
     Logger.debug("bootstrap", "Running on: Java ${System.getProperty("java.version")}")
 
-    val launchDir: String = if(args.isEmpty()) "." else args[0]
+    val launchDir: String = if(args.isEmpty()) "" else args[0]
     val windowState = rememberWindowState(
         size = DpSize(width = 1000.dp, height = 600.dp), position = WindowPosition.Aligned(Alignment.Center)
     )

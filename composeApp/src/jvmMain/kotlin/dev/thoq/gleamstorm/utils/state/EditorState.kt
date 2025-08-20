@@ -1,8 +1,8 @@
 package dev.thoq.gleamstorm.utils.state
 
-enum class EditorState {
-    Home,
-    Wizard,
-    Project,
-    Settings
+sealed class EditorState {
+    object Home : EditorState()
+    object Wizard : EditorState()
+    data class Project(val projectPath: String) : EditorState()
+    object Settings : EditorState()
 }
