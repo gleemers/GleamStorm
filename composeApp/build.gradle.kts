@@ -31,6 +31,7 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+            implementation("org.jetbrains.compose.components:components-splitpane:1.6.10")
         }
     }
 }

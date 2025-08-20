@@ -1,33 +1,20 @@
 package dev.thoq.gleamstorm.components
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.KeyEventType
-import androidx.compose.ui.input.key.isCtrlPressed
-import androidx.compose.ui.input.key.isMetaPressed
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onKeyEvent
-import androidx.compose.ui.input.key.type
-import androidx.compose.ui.unit.dp
+import androidx.compose.ui.input.key.*
 import dev.thoq.gleamstorm.utils.state.ProjectState
+import org.jetbrains.compose.splitpane.ExperimentalSplitPaneApi
+import org.jetbrains.compose.splitpane.HorizontalSplitPane
+import org.jetbrains.compose.splitpane.VerticalSplitPane
+import org.jetbrains.compose.splitpane.rememberSplitPaneState
 import java.io.File
 
+@OptIn(ExperimentalSplitPaneApi::class)
 @Composable
 fun InProject(directory: String, colorScheme: ColorScheme = darkColorScheme()) {
     val projectState = remember { ProjectState() }
@@ -59,42 +46,56 @@ fun InProject(directory: String, colorScheme: ColorScheme = darkColorScheme()) {
                 false
             }
         ) {
-            Row(modifier = Modifier.fillMaxSize()) {
-                Box(
-                    modifier = Modifier.width(width = 300.dp).fillMaxHeight()
-                ) {
+            HorizontalSplitPane(
+                splitPaneState = rememberSplitPaneState(initialPositionPercentage = 0.2f)
+            ) {
+                first {
                     FileTree(
                         directory = directory, colorScheme = colorScheme, onFileClick = onFileClick
                     )
                 }
-
-                Column(
-                    modifier = Modifier.fillMaxWidth().fillMaxHeight()
-                ) {
-                    EditorTabs(
-                        openFiles = projectState.openFiles.value.map { it.absolutePath },
-                        activeFile = projectState.activeFile.value?.absolutePath,
-                        onTabClick = { path ->
-                            projectState.switchTab(File(path))
-                        },
-                        onTabClose = { path ->
-                            projectState.closeFile(File(path))
-                        },
-                        colorScheme = colorScheme
-                    )
-                    Box(modifier = Modifier.weight(1f)) {
-                        Editor(
-                            placeholder = projectState.activeFile.value?.let { "Editing: ${it.name}" }
-                                ?: "Select a file to edit",
-                            text = projectState.editorText,
-                            fileName = projectState.activeFile.value?.name ?: "untitled.txt",
-                            colorScheme = colorScheme,
-                            onSave = onSave
+                second {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().fillMaxHeight()
+                    ) {
+                        EditorTabs(
+                            openFiles = projectState.openFiles.value.map { it.absolutePath },
+                            activeFile = projectState.activeFile.value?.absolutePath,
+                            onTabClick = { path ->
+                                projectState.switchTab(File(path))
+                            },
+                            onTabClose = { path ->
+                                projectState.closeFile(File(path))
+                            },
+                            colorScheme = colorScheme
                         )
-                    }
-                    if (showTerminal) {
-                        Box(modifier = Modifier.height(200.dp)) {
-                            Terminal(projectState)
+                        if (showTerminal) {
+                            VerticalSplitPane(
+                                splitPaneState = rememberSplitPaneState(initialPositionPercentage = 0.7f)
+                            ) {
+                                first {
+                                    Editor(
+                                        placeholder = projectState.activeFile.value?.let { "Editing: ${it.name}" }
+                                            ?: "Select a file to edit",
+                                        text = projectState.editorText,
+                                        fileName = projectState.activeFile.value?.name ?: "untitled.txt",
+                                        colorScheme = colorScheme,
+                                        onSave = onSave
+                                    )
+                                }
+                                second {
+                                    Terminal(projectState)
+                                }
+                            }
+                        } else {
+                            Editor(
+                                placeholder = projectState.activeFile.value?.let { "Editing: ${it.name}" }
+                                    ?: "Select a file to edit",
+                                text = projectState.editorText,
+                                fileName = projectState.activeFile.value?.name ?: "untitled.txt",
+                                colorScheme = colorScheme,
+                                onSave = onSave
+                            )
                         }
                     }
                 }

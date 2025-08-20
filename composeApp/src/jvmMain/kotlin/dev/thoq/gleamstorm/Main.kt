@@ -28,7 +28,7 @@ fun launch(args: Array<String>) = application {
 
     val launchDir: String = if(args.isEmpty()) "" else args[0]
     val windowState = rememberWindowState(
-        size = DpSize(width = 1000.dp, height = 600.dp), position = WindowPosition.Aligned(Alignment.Center)
+        size = DpSize(width = 1100.dp, height = 700.dp), position = WindowPosition.Aligned(Alignment.Center)
     )
 
     Window(
@@ -43,6 +43,11 @@ fun launch(args: Array<String>) = application {
 }
 
 fun main(args: Array<String>) = runBlocking {
+    if(System.getProperty("os.name").lowercase().contains("mac")) {
+        System.setProperty("apple.laf.useScreenMenuBar", "true")
+        System.setProperty("apple.awt.application.name", "GleamStorm")
+    }
+
     Logger.init()
     Logger.info("bootstrap", "Starting GleamStorm...")
 
