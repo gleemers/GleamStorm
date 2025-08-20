@@ -1,5 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
 
+val currentOs = org.gradle.internal.os.OperatingSystem.current()
+
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
     alias(libs.plugins.composeMultiplatform)
@@ -38,12 +40,27 @@ compose.desktop {
         mainClass = "dev.thoq.gleamstorm.MainKt"
 
         nativeDistributions {
-            targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb, TargetFormat.AppImage)
             packageName = "dev.thoq.gleamstorm"
             packageVersion = "1.0.0"
 
+            macOS {
+                iconFile.set(project.file("../brand/gleamstorm_1024.png"))
+                targetFormats(TargetFormat.Dmg)
+            }
+            windows {
+                iconFile.set(project.file("../brand/gleamstorm_1024.png"))
+                targetFormats(TargetFormat.Msi)
+            }
             linux {
                 iconFile.set(project.file("../brand/gleamstorm_1024.png"))
+
+                // we need this as macos thinks its funny to try to
+                // use the appimage, it needs the `if` statment
+                if(currentOs.isLinux) {
+                    targetFormats(TargetFormat.Deb, TargetFormat.AppImage)
+                } else {
+                    targetFormats(TargetFormat.Deb)
+                }
             }
         }
     }
