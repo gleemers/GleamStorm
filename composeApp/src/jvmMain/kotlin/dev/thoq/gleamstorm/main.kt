@@ -33,5 +33,9 @@ fun launch(args: Array<String>) = application {
 }
 
 fun main(args: Array<String>) = runBlocking {
+    System.setProperty("apple.awt.application.appearance", "system")
+    System.setProperty("apple.laf.useScreenMenuBar", "true")
+    System.setProperty("apple.awt.application.name", "GleamStorm")
+
     launch(args = args)
 }
