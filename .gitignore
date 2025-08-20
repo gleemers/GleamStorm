@@ -17,6 +17,7 @@ captures
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
 /run/logs
+/logs
 /GleamStorm.AppDir
 *.AppImage
 
