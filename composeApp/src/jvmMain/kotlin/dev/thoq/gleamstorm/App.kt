@@ -16,6 +16,7 @@ import dev.thoq.gleamstorm.utils.state.EditorState
 import org.jetbrains.compose.ui.tooling.preview.Preview
 import dev.thoq.gleamstorm.components.CustomTitleBar
 import dev.thoq.gleamstorm.components.Home
+import dev.thoq.gleamstorm.integration.ErlangSyntaxPlugin
 
 @Composable
 @Preview
@@ -30,6 +31,7 @@ fun FrameWindowScope.App(
 
     remember {
         editor.addPlugin(plugin = GleamSyntaxPlugin())
+        editor.addPlugin(plugin = ErlangSyntaxPlugin())
     }
 
     Logger.debug("app", "State: $currentState")
