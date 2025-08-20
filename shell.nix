@@ -33,6 +33,7 @@ pkgs.mkShell {
     expat
     libxkbcommon
     dbus
+    fuse2
     at-spi2-atk
     at-spi2-core
   ];
@@ -68,6 +69,7 @@ pkgs.mkShell {
       pkgs.expat
       pkgs.libxkbcommon
       pkgs.dbus
+      pkgs.fuse2
       pkgs.at-spi2-atk
       pkgs.at-spi2-core
     ]}:$LD_LIBRARY_PATH
