@@ -1,0 +1,13 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="GleamStorm: Dev" type="Application" factoryName="Application">
+    <option name="ALTERNATIVE_JRE_PATH" value="ms-21" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="MAIN_CLASS_NAME" value="dev.thoq.gleamstorm.MainKt" />
+    <module name="GleamStorm.composeApp.jvmMain" />
+    <option name="VM_PARAMETERS" value="-Xmx8G -Xms2G" />
+    <option name="WORKING_DIRECTORY" value="/" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

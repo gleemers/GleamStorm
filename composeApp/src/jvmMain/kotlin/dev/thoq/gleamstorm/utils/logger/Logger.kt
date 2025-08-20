@@ -17,7 +17,7 @@ object Logger {
 
     fun getDate(): String = Date.from(Date().toInstant()).toString()
 
-    fun getThread(): String = Thread.currentThread().name.padEnd(10)
+    fun getThread(): String = Thread.currentThread().name.padEnd(25)
 
     fun formatLevel(level: LogLevel): String = level.toString().padEnd(7)
 

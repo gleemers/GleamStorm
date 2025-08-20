@@ -1,6 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.gradle.internal.os.OperatingSystem
 
-val currentOs = org.gradle.internal.os.OperatingSystem.current()
+val currentOs: OperatingSystem = OperatingSystem.current()
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -33,7 +34,6 @@ kotlin {
         }
     }
 }
-
 
 compose.desktop {
     application {

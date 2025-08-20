@@ -15,7 +15,7 @@ import java.io.File
 
 @Composable
 @Preview
-fun InProject(dir: String, colorScheme: ColorScheme = darkColorScheme()) {
+fun InProject(directory: String, colorScheme: ColorScheme = darkColorScheme()) {
     val currentFile = remember { mutableStateOf<File?>(null) }
     val editorText = remember { mutableStateOf("") }
 
@@ -46,31 +46,25 @@ fun InProject(dir: String, colorScheme: ColorScheme = darkColorScheme()) {
     }
 
     MaterialTheme(colorScheme) {
-        Row(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxSize()
+        ) {
             Box(
-                modifier = Modifier
-                    .width(300.dp)
-                    .fillMaxHeight()
+                modifier = Modifier.width(width = 300.dp).fillMaxHeight()
             ) {
                 FileTree(
-                    directory = dir,
-                    colorScheme = colorScheme,
-                    onFileClick = onFileClick
+                    directory = directory, colorScheme = colorScheme, onFileClick = onFileClick
                 )
             }
 
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .fillMaxHeight()
+                modifier = Modifier.fillMaxWidth().fillMaxHeight()
             ) {
-                Editor(
-                    placeholder = currentFile.value?.let { "Editing: ${it.name}" } ?: "Select a file to edit",
+                Editor(placeholder = currentFile.value?.let { "Editing: ${it.name}" } ?: "Select a file to edit",
                     text = editorText,
                     fileName = currentFile.value?.name ?: "untitled.txt",
                     colorScheme = colorScheme,
-                    onSave = onSave
-                )
+                    onSave = onSave)
             }
         }
     }
